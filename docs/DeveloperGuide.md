@@ -85,6 +85,14 @@ The `UI` component,
 * depends on some classes in the `Model` component because it displays `Person` objects from the model.
 * opens a `ContactDetailsWindow` when a successful `show` command returns a selected contact in its `CommandResult`.
 
+#### Event-driven UI interactions
+
+The UI uses JavaFX's event-driven programming model. UI components register event handlers for user interactions, such as button clicks and command submissions. When an event occurs, JavaFX dispatches it to the corresponding handler.
+
+For command execution, the command box's event handler retrieves the entered command and passes it to the `Logic` component. The resulting `CommandResult` is then used to update the result display or trigger other UI actions, such as opening a contact details window.
+
+The UI also observes changes to the model's contact list. When the model updates its observable list, the corresponding UI components are refreshed automatically.
+
 ### Logic component
 
 **API** : [`Logic.java`](https://github.com/AY2627S1-CS2103T-W14-1/tp/tree/master/src/main/java/seedu/address/logic/Logic.java)
@@ -485,8 +493,12 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
 | `* *`    | user                                       | record a contact's faculty/department | remember where they belong within the university               |
 | `* *`    | user                                       | add notes about a contact    | remember the context in which I know them                              |
 | `* *`    | user                                       | filter contacts by student/staff role | narrow down my contact list                                    |
+| `* *`    | user                                       | attach a photo to a contact | recognise the person more easily                                    |
+| `* *`    | user                                       | view recently accessed contacts | quickly return to profiles I viewed earlier                                    |
+| `* *`    | user                                       | sort contacts by different attributes | find contacts in a convenient order                                    |
+| `* *`    | user                                       | mark contacts as favourites | access frequently needed contacts quickly                                    |
+| `* *`    | user                                       | distinguish contacts with identical names | select the correct person                                    |
 | `*`      | user                                       | group contacts by modules/projects | find related people much easier                                  |
-| `*`      | user                                       | mark important contacts as favourites | access the people I frequently need much faster                 |
 
 ### Use cases
 
@@ -514,6 +526,95 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
     * 1b1. System assigns the contact an index in that name bucket and displays a suffix when needed to distinguish it.
 
       Use case ends.
+
+**Use case: Edit a contact**
+
+**MSS**
+
+1. User requests to edit an existing contact by providing its display name and the fields to change.
+2. System validates the supplied fields and updates the contact.
+3. System displays a success message.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The provided name does not match any existing contact.
+  
+  * 1a1. System displays an error message.
+    
+    Use case ends.
+    
+* 2a. One or more supplied fields are invalid.
+  
+  * 2a1. System displays an error message and does not apply the invalid changes.
+    
+    Use case ends.
+
+**Use case: Add favourite contacts**
+
+**MSS**
+
+1. User requests to mark an existing contact as a favourite.
+2. System adds the contact to the favourite selection and displays a success message.
+3. User requests to view favourite contacts.
+4. System displays the selected contacts in the user's chosen sort order.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The contact is already a favourite.
+  
+  * 1a1. System informs the user that the contact is already a favourite.
+    
+    Use case ends.
+    
+* 1b. The contact does not exist.
+  
+  * 1b1. System displays an error message.
+    
+    Use case ends.
+
+**Use case: Remove favourite contacts**
+
+**MSS**
+
+1. User requests to unmark an existing contact as a favourite.
+2. System removes the contact from the favourite selection and displays a success message.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The contact is already not a favourite.
+  
+  * 1a1. System informs the user that the contact is already not a favourite.
+    
+    Use case ends.
+  
+* 1b. The contact does not exist.
+  
+  * 1b1. System displays an error message.
+    
+    Use case ends.
+
+**Use case: Sort contacts**
+
+**MSS**
+
+1. User requests to sort the displayed contacts using a supported attribute and direction.
+2. System displays the contacts in the requested order.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The user supplies an unsupported sorting attribute or direction.
+  
+  * 1a1. System displays an error message without changing the current sort order.
+    
+    Use case ends.
 
 **Use case: Delete a contact**
 
@@ -608,7 +709,7 @@ testers are expected to do more *exploratory* testing.
 
    1. Close the window.
       
-   1. Double-click the JAR file in the same folder.
+   1. Double-click the JAR file in the same folder.>br?
       Expected: The GUI opens with all previous contacts saved automatically.
    
 1. Saving window preferences
@@ -616,7 +717,7 @@ testers are expected to do more *exploratory* testing.
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
    1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
+      Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
 
@@ -695,8 +796,37 @@ Use a disposable data folder. Add two contacts named John Tan with different pho
    
    1. Prerequisites: Add contacts named John Tan and Jane Lim.
      
-   1. Test case: Run `find Jane`, followed by `delete John Tan`.
+   1. Test case: Run `find Jane`, followed by `delete John Tan`.<br>
       Expected: John Tan is deleted even though the displayed list only contains Jane Lim.
+
+### Editing a person
+
+Use a disposable data folder and add two contacts named John Tan with different phone numbers.
+
+1. Editing a contact's basic details
+
+   1. Test case: `edit John Tan /phone 91234567`
+   Expected: The phone number of the unsuffixed John Tan is updated, while John Tan_2 remains unchanged.
+
+2. Editing a duplicate-name contact
+
+   1. Test case: `edit John Tan_2 /phone 98765432`
+   Expected: Only the second John Tan is updated.
+
+3. Clearing an optional field
+
+   1. Test case: `edit John Tan /major [blank]`
+   Expected: The contact's major is cleared, while other fields remain unchanged.
+
+4. Editing a contact while another contact is displayed
+
+   1. Test case: Run `find Jane`, followed by `edit John Tan /phone 91234567`.
+   Expected: John Tan is updated even though the displayed list only contains Jane Lim.
+
+5. Editing a nonexistent contact
+
+   1. Test case: `edit Nonexistent Person /phone 91234567`
+   Expected: No contact is modified. The result area displays an error message.
 
 ### Saving data
 
