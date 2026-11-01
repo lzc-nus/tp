@@ -196,18 +196,21 @@ On startup, `JsonSerializableAddressBook` validates each bucket, recreates the i
 
 ### Adding contacts and assigning identifiers
 
-`PersonIndex` is assigned to each `Person` only at `UniquePersonHashMap`. `AddCommand` therefore stores an `UnindexedPerson` representing an incomplete `Person`. Here's how it works:
+Parsing, command execution, and identifier assignment are separate steps. `AddCommandParser`
+validates the input and creates an immutable `UnindexedPerson`; `AddCommand` passes that
+value to the model, which is the only component responsible for assigning a `PersonIndex`.
 
-1. When a new contact is added, the command first supplies the model with an immutable `UnindexedPerson`. This object carries the validated contact details but has no `PersonIndex`, so it is not stored directly.
-2. `UniquePersonHashMap` finds the contact’s name bucket, allocates the smallest available zero-based index, and calls `UnindexedPerson#withPersonIndex(...)` to create the indexed `Person` that is inserted into the bucket.
+`UniquePersonHashMap` finds the contact's name bucket, allocates the smallest available
+zero-based index, and calls `UnindexedPerson#withPersonIndex(...)` to create the indexed
+`Person`. It inserts that `Person` into the bucket and refreshes the flattened observable
+list used by the UI. The temporary unindexed value is not stored after conversion.
 
-The original `UnindexedPerson` is no longer referenced after this operation and becomes eligible for garbage collection; it is not explicitly destroyed by the program.
+The flow is split into parsing and execution below. Together, the diagrams show the full
+add operation while keeping the parser's validation responsibilities distinct from the
+model's identity-assignment responsibilities.
 
-After insertion, the name bucket remains ordered by index, while the outer map keeps contacts grouped by base name. The flattened observable list is then rebuilt in name-and-index order so existing list and filtered views receive the updated data. This separation allows parsing and command execution to work with a temporary unindexed value while the model remains responsible for assigning storage identity.
-
-Here's a visualization of adding a person in action:
-
-<puml src="diagrams/AddSequenceDiagram.puml" alt="Parsing and executing an add command" />
+<puml src="diagrams/AddParsingSequenceDiagram.puml" alt="Parsing an add command" />
+<puml src="diagrams/AddExecutionSequenceDiagram.puml" alt="Executing an add command and assigning its identifier" />
 
 ### Roles, edit history, and sorting
 
