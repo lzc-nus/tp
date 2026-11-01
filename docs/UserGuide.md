@@ -211,8 +211,9 @@ Format: `recent` (no arguments)
 
 Shows the last ten different contacts opened with `show NAME[_NUMBER]`, most recent first.
 Opening the same contact again moves it to the front; opening an eleventh distinct contact removes the oldest
-from history, not from the address book. If `show` cannot find the contact, history stays unchanged. A save error also leaves
-history unchanged and prevents the popup from opening. Running `recent`, `list` or `sort` does not count as a visit.
+from history, not from the address book. If `show` cannot find the contact, history stays unchanged. If saving a successful
+`show` command fails, the history update is rolled back, a warning is shown, and the contact-details popup still opens.
+Running `recent`, `list` or `sort` does not count as a visit.
 
 `recent` replaces the current filter and temporarily uses history order rather than your selected sort.
 Reopening a contact while viewing `recent` immediately moves it to the front. `list` returns to all contacts
@@ -302,7 +303,9 @@ the same process.
 
 CampusContacts automatically saves data after every command. You do not need to save manually.
 
-Photos are stored separately in `[JAR file location]/data/photos`. Do not rename or delete files in this folder while their contacts still exist; otherwise their details popup will show that the photo is unavailable.
+The app stores its data under the working directory (the folder from which you launch the JAR): contacts are saved in
+`data/campuscontacts.json`, and photos are stored in `data/photos`. Do not rename or delete files in the photos folder
+while their contacts still exist; otherwise their details popup will show that the photo is unavailable.
 
 ### Editing the data file
 
@@ -311,7 +314,8 @@ the second launch displays an error; close the other instance before trying agai
 used independently. Do not delete or rename `data/campuscontacts.json.lock` while the application is running.
 It is normal for this file to remain after exit; it does not stop the next launch.
 
-CampusContacts data is saved automatically as a JSON file `[JAR file location]/data/campuscontacts.json`. Advanced users are welcome to update data directly by editing that data file.
+CampusContacts data is saved automatically as a JSON file at `data/campuscontacts.json` under the working directory
+from which you launch the JAR. Advanced users are welcome to update data directly by editing that data file.
 
 <box type="warning" seamless>
 
