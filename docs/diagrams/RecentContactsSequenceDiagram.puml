@@ -13,10 +13,14 @@ activate LogicManager
 note over LogicManager : Parsing omitted; s is the parsed command.
 LogicManager -> ShowCommand : execute(m)
 activate ShowCommand
-ShowCommand -> Model : getFilteredPersonList()
+ShowCommand -> Model : getAddressBook()
 activate Model
-Model --> ShowCommand : displayed contacts
+Model --> ShowCommand : addressBook
 deactivate Model
+ShowCommand -> AddressBook : getPersonList()
+activate AddressBook
+AddressBook --> ShowCommand : all contacts
+deactivate AddressBook
 note over ShowCommand : Match the contact's name and suffix.
 ShowCommand --> LogicManager : result containing selected Person
 deactivate ShowCommand
