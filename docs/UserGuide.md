@@ -182,7 +182,7 @@ Format: `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/locatio
 - When editing tags, all of the person's existing tags are removed; adding tags is not cumulative.
 - To remove all of a person's tags, enter `t/` without a tag after it.
 - Use `/photo FILE_PATH` to add or replace a contact photo. Use `/photo [blank]` to remove it.
-- Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. This happens even if the new name is the same as the old one.
+- Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. If the new name is the same as the old one, the contact keeps its current suffix.
 
 Examples:
 * `edit John Doe /phone 91234567 /email johndoe@example.com` Edits the phone number and email address of John Doe.
@@ -346,7 +346,7 @@ _Details coming soon ..._
 
 | Action          | Format, Examples                                                                                                                                                                                                                                                                                                                                         |
 |-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Add**         | `add NAME /role ROLE /email EMAIL /phone PHONE /location LOCATION [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH] [t/TAG or /tag TAG]...` <br> e.g., `add James Ho /role student /email jamesho@example.com /phone 22224444 /location COM1` (use only the optional fields for the chosen role) |
+| **Add**         | `add NAME /role ROLE /email EMAIL /phone PHONE /location LOCATION [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH] [t/TAG]...` <br> e.g., `add James Ho /role student /email jamesho@example.com /phone 22224444 /location COM1` (use only the optional fields for the chosen role) |
 | **Clear**       | `clear` _(Followed by `yes` to confirm or `no` to cancel)_                                                                                                                                                                                                                                                                                               |
 | **Delete**      | `delete NAME[_NUMBER]`<br> e.g., `delete Alex Yeoh`                                                                                                                                                                                                                                                                                                      |
 | **Edit**        | `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH or [blank]] [t/TAG or /tag TAG]...`<br> e.g., `edit James Lee /phone 91234567 /email jameslee@example.com`                                                  |

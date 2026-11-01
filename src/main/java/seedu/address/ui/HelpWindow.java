@@ -58,6 +58,7 @@ public class HelpWindow extends UiPart<Stage> {
             Use /photo FILE_PATH to add or replace a photo.
             Use /photo [blank] to remove it.
             Renaming assigns the smallest available suffix for the new name.
+            Renaming to the same name preserves the contact's current suffix.
             Examples:
               edit Alex Yeoh /phone 91234567
               edit Alex Yeoh /photo C:\\Users\\Student\\Pictures\\new.jpg
