@@ -39,17 +39,26 @@ public class HelpWindow extends UiPart<Stage> {
             2. SHOW CONTACT DETAILS
             Syntax: show NAME[_NUMBER]
             Opens the contact's full details.
+            The contact must be in the currently displayed list; use list first
+            if a filter hides it.
             Example: show John Tan_2
 
             3. EDIT A CONTACT
             Syntax:
-              edit NAME[_INDEX] [/name NAME] [/phone PHONE] [/email EMAIL]
+              edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL]
               [/location LOCATION] [/major MAJOR] [/year YEAR]
               [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS]
-              [/photo FILE_PATH] [t/TAG]...
+              [/photo FILE_PATH or /photo [blank]]
+              [t/TAG or /tag TAG]...
+            Works even when a filter hides the contact.
+            At least one field must be provided. Existing values are overwritten.
+            Student-only fields are /major and /year; professor-only fields are
+            /faculty, /department and /hours. Fields for the other role are rejected.
+            Entering tags replaces all existing tags; use t/ to clear them.
             Use /photo FILE_PATH to add or replace a photo.
             Use /photo [blank] to remove it.
             Renaming assigns the smallest available suffix for the new name.
+            Renaming to the same name preserves the contact's current suffix.
             Examples:
               edit Alex Yeoh /phone 91234567
               edit Alex Yeoh /photo C:\\Users\\Student\\Pictures\\new.jpg
@@ -68,7 +77,9 @@ public class HelpWindow extends UiPart<Stage> {
                               [/location LOCATION] [/major MAJOR] [/year YEAR]
                               [/faculty FACULTY] [/department DEPARTMENT]
                               [/hours HOURS] [t/TAG]...
-            Searches contact details for matching criteria.
+            Searches contact details using case-insensitive substring matching.
+            Different fields are combined with AND; multiple values in one field
+            are combined with OR. Names may be entered directly or with /name.
             Example: find /name John /location COM1
 
             6. LIST ALL CONTACTS
@@ -78,32 +89,44 @@ public class HelpWindow extends UiPart<Stage> {
             7. SORT CONTACTS
             Syntax: sort FIELD [asc|desc]
             Fields: name, phone, add, edit. Default order: ascending.
+            For add and edit, ascending means most recent first.
             Example: sort name desc
 
             8. LIST RECENT CONTACTS
             Syntax: recent
             Shows up to ten distinct contacts opened with show,
             most recent first. Recent history is saved across restarts.
+            Replaces the current filter and temporarily uses recent-first order.
+            list returns to all contacts; sort changes the current displayed order.
+            Run recent again to restore recent-first order. Only visible contacts
+            can be opened with show; use list first if needed.
 
             9. FAVOURITE OR UNFAVOURITE A CONTACT
             Syntax: favourite NAME[_NUMBER]
                     unfavourite NAME[_NUMBER]
             Works even when a filter hides the contact.
+            Names are case-insensitive. Omitting _NUMBER targets only the
+            unsuffixed contact. Repeating a command reports that no change was made.
             Example: favourite John Tan_2
 
             10. LIST FAVOURITE CONTACTS
             Syntax: favourites
-            Shows favourites in the selected sort order.
+            Shows favourites in the selected sort order and replaces the current filter.
+            Use list to return to all contacts. Favourites are saved across restarts;
+            deleting or clearing contacts removes the corresponding favourites.
 
             11. CLEAR ALL CONTACTS
             Syntax: clear
             Type yes to confirm or no to cancel.
+            Cancelling leaves contacts, favourites, and recent-contact history unchanged.
 
             12. OPEN THIS GUIDE
             Syntax: help
 
             13. EXIT THE APP
             Syntax: exit
+            If changes could not be saved, type yes to exit anyway; any other response
+            cancels the exit.
             """;
 
     private static final Logger logger = LogsCenter.getLogger(HelpWindow.class);

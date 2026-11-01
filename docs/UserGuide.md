@@ -149,7 +149,11 @@ references to that missing contact in `favouriteContacts` are ignored when loadi
 
 ### Sorting persons: `sort`
 
-Sorts the displayed persons by name or phone number.
+Sorts the displayed persons by a field.
+- `name` sorts by lexicographical order of names.
+- `phone` sorts by numerical order of phone numbers.
+- `add` sorts by most recent added person to oldest.
+- `edit` sorts by most recent edited person to oldest.
 
 Format: `sort FIELD [asc|desc]`
 
@@ -169,15 +173,16 @@ Examples:
 
 Edits an existing person in the contact list.
 
-Format: `edit NAME[_INDEX] [/name NAME] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH or [blank]] [t/TAG or /tag TAG]...`
+Format: `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH or [blank]] [t/TAG or /tag TAG]...`
 
-- Edits the person at the specified `INDEX`. The index refers to the index number shown in the displayed person list. The index **must be a positive integer** 1, 2, 3, ...
+- Edits the person with the specified `NAME`.
+- Editing works across the whole address book, even if the contact is hidden by the current filter.
 - At least one of the optional fields must be provided.
 - Existing values will be updated to the input values.
 - When editing tags, all of the person's existing tags are removed; adding tags is not cumulative.
 - To remove all of a person's tags, enter `t/` without a tag after it.
 - Use `/photo FILE_PATH` to add or replace a contact photo. Use `/photo [blank]` to remove it.
-- Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. This happens even if the new name is the same as the old one.
+- Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. If the new name is the same as the old one, the contact keeps its current suffix.
 
 Examples:
 * `edit John Doe /phone 91234567 /email johndoe@example.com` Edits the phone number and email address of John Doe.
@@ -254,12 +259,13 @@ Examples:
 
 Deletes the specified person from the contact list.
 
-Format: `delete NAME[_INDEX]`
+Format: `delete NAME[_NUMBER]`
 
 - Deletes the person with the specified `NAME`.
 - The optional number identifies a particular contact with the specified name.
-- The index **must be a positive integer** 1, 2, 3, ...
-- If the index is omitted, it defaults to 1.
+- The number **must be a positive integer** 1, 2, 3, ...
+- If the number is omitted, it defaults to 1.
+- Deleting works across the whole address book, even if the contact is hidden by the current filter.
 
 Examples:
 
@@ -338,19 +344,19 @@ _Details coming soon ..._
 
 ## Command summary
 
-| Action          | Format, Examples                                                                                                                                                                                                                                          |
-|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Action          | Format, Examples                                                                                                                                                                                                                                                                                                                                         |
+|-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Add**         | `add NAME /role ROLE /email EMAIL /phone PHONE /location LOCATION [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH] [t/TAG]...` <br> e.g., `add James Ho /role student /email jamesho@example.com /phone 22224444 /location COM1` (use only the optional fields for the chosen role) |
-| **Clear**       | `clear` _(Followed by `yes` to confirm or `no` to cancel)_                                                                                                                                                                                                |
-| **Delete**      | `delete NAME[_INDEX]`<br> e.g., `delete Alex Yeoh`                                                                                                                                                                                                        |
-| **Edit**        | `edit NAME[_INDEX] [/name NAME] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [t/TAG or /tag TAG]...`<br> e.g., `edit James Lee /phone 91234567 /email jameslee@example.com` |
-| **Find**        | `find [/name NAME] [/role ROLE] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [t/TAG or /tag TAG]...`<br> e.g., `find John /location COM1 t/colleague`        |
-| **List**        | `list`                                                                                                                                                                                                                                                    |
-| **Show**        | `show NAME[_NUMBER]`<br> e.g., `show James Ho_2`                                                                                                                                                                                                          |
-| **Recent**      | `recent`                                                                                                                                                                                                                                                  |
-| **Favourite**   | `favourite NAME[_NUMBER]`<br> e.g., `favourite James Ho_2`                                                                                                                                                                                                |
-| **Unfavourite** | `unfavourite NAME[_NUMBER]`<br> e.g., `unfavourite James Ho_2`                                                                                                                                                                                            |
-| **Favourites**  | `favourites`                                                                                                                                                                                                                                              |
-| **Sort**        | `sort FIELD [asc\|desc]`<br> e.g. `sort phone desc`                                                                                                                                                                                                       |
-| **Help**        | `help`                                                                                                                                                                                                                                                    |
-| **Exit**        | `exit`                                                                                                                                                                                                                                                    |
+| **Clear**       | `clear` _(Followed by `yes` to confirm or `no` to cancel)_                                                                                                                                                                                                                                                                                               |
+| **Delete**      | `delete NAME[_NUMBER]`<br> e.g., `delete Alex Yeoh`                                                                                                                                                                                                                                                                                                      |
+| **Edit**        | `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH or [blank]] [t/TAG or /tag TAG]...`<br> e.g., `edit James Lee /phone 91234567 /email jameslee@example.com`                                                  |
+| **Find**        | `find [/name NAME] [/role ROLE] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [t/TAG or /tag TAG]...`<br> e.g., `find John /location COM1 t/colleague`                                                                                                       |
+| **List**        | `list`                                                                                                                                                                                                                                                                                                                                                   |
+| **Show**        | `show NAME[_NUMBER]`<br> e.g., `show James Ho_2`                                                                                                                                                                                                                                                                                                         |
+| **Recent**      | `recent`                                                                                                                                                                                                                                                                                                                                                 |
+| **Favourite**   | `favourite NAME[_NUMBER]`<br> e.g., `favourite James Ho_2`                                                                                                                                                                                                                                                                                               |
+| **Unfavourite** | `unfavourite NAME[_NUMBER]`<br> e.g., `unfavourite James Ho_2`                                                                                                                                                                                                                                                                                           |
+| **Favourites**  | `favourites`                                                                                                                                                                                                                                                                                                                                             |
+| **Sort**        | `sort FIELD [asc\|desc]`<br> e.g. `sort phone desc`                                                                                                                                                                                                                                                                                                      |
+| **Help**        | `help`                                                                                                                                                                                                                                                                                                                                                   |
+| **Exit**        | `exit`                                                                                                                                                                                                                                                                                                                                                   |
