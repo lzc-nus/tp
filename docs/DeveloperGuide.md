@@ -138,7 +138,7 @@ How the parsing works:
 The `Model` component,
 
 * stores address book data in a `UniquePersonHashMap`. It groups contacts by their base name and stores each group in a `TreeMap<Integer, Person>`.
-* [gives each stored contact a `PersonIndex`](#add-command-parsing). The first contact in a name bucket has index `0` and is displayed without a suffix; subsequent contacts are displayed with a suffix derived from their 1-based index, such as `John Tan_2`.
+* [gives each stored contact a `PersonIndex`](#adding-contacts-and-assigning-identifiers). The first contact in a name bucket has index `0` and is displayed without a suffix; subsequent contacts are displayed with a suffix derived from their 1-based index, such as `John Tan_2`.
 * keeps an unmodifiable flattened `ObservableList<Person>` ordered by base name and then bucket index. This preserves a straightforward list for the existing UI and filtered views.
 * stores the `Person` objects selected by the current filter, such as search results, in a separate _filtered_ list. It exposes this list as an unmodifiable `ObservableList<Person>` that the UI can observe and bind to, so the UI updates when the list changes.
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
@@ -167,21 +167,6 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
-### Adding contacts and assigning identifiers
-
-The CampusContacts development team has decided to allow duplicate names, and assign indices to them for identification. For clean storing & restoring these indices upon reload, and efficient reuse of free indices, our team takes the following two-step approach to adding a person:
-
-1. When a new contact is added, the command first supplies the model with an immutable `UnindexedPerson`. This object carries the validated contact details but has no `PersonIndex`, so it is not stored directly. 
-2. `UniquePersonHashMap` finds the contact’s name bucket, allocates the smallest available zero-based index, and calls `UnindexedPerson#withPersonIndex(...)` to create the indexed `Person` that is inserted into the bucket.
-
-The original `UnindexedPerson` is no longer referenced after this operation and becomes eligible for garbage collection; it is not explicitly destroyed by the program.
-
-After insertion, the name bucket remains ordered by index, while the outer map keeps contacts grouped by base name. The flattened observable list is then rebuilt in name-and-index order so existing list and filtered views receive the updated data. This separation allows parsing and command execution to work with a temporary unindexed value while the model remains responsible for assigning storage identity.
-
-Here's a visualization of adding a person in action:
-
-<puml src="diagrams/AddSequenceDiagram.puml" alt="Parsing and executing an add command" />
-
 ### Contact identity and name-bucket storage
 
 CampusContacts allows several contacts to share the same name. `AddressBook` owns a `UniquePersonHashMap`, whose outer `TreeMap` groups contacts by name. Each group is a `PersonNameBucket` containing:
@@ -208,6 +193,21 @@ The storage snapshot is structured as follows:
 ```
 
 On startup, `JsonSerializableAddressBook` validates each bucket, recreates the indexed `Person` objects from the nested map keys, and passes the result to `AddressBook#setPersonBuckets`. The name bucket rebuilds its released-index queue and next-index value once. Normal add, delete, and edit operations use the in-memory map; `LogicManager` subsequently saves a snapshot through `Storage`.
+
+### Adding contacts and assigning identifiers
+
+`PersonIndex` is assigned to each `Person` only at `UniquePersonHashMap`. `AddCommand` therefore stores an `UnindexedPerson` representing an incomplete `Person`. Here's how it works:
+
+1. When a new contact is added, the command first supplies the model with an immutable `UnindexedPerson`. This object carries the validated contact details but has no `PersonIndex`, so it is not stored directly.
+2. `UniquePersonHashMap` finds the contact’s name bucket, allocates the smallest available zero-based index, and calls `UnindexedPerson#withPersonIndex(...)` to create the indexed `Person` that is inserted into the bucket.
+
+The original `UnindexedPerson` is no longer referenced after this operation and becomes eligible for garbage collection; it is not explicitly destroyed by the program.
+
+After insertion, the name bucket remains ordered by index, while the outer map keeps contacts grouped by base name. The flattened observable list is then rebuilt in name-and-index order so existing list and filtered views receive the updated data. This separation allows parsing and command execution to work with a temporary unindexed value while the model remains responsible for assigning storage identity.
+
+Here's a visualization of adding a person in action:
+
+<puml src="diagrams/AddSequenceDiagram.puml" alt="Parsing and executing an add command" />
 
 ### Roles, edit history, and sorting
 
