@@ -27,7 +27,7 @@ You can reach us at the email `seer[at]comp.nus.edu.sg`
 
 <img src="images/scoot1234.png" width="200px">
 
-[[github](https://github.com/scoot1234)]
+[[github](https://github.com/scoot1234)] [[portfolio](team/scoot1234.md)]
 
 - Role: Team Lead
 - Responsibilities: To code & to lead(?)
