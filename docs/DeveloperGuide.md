@@ -85,6 +85,14 @@ The `UI` component,
 * depends on some classes in the `Model` component because it displays `Person` objects from the model.
 * opens a `ContactDetailsWindow` when a successful `show` command returns a selected contact in its `CommandResult`.
 
+#### Event-driven UI interactions
+
+The UI uses JavaFX's event-driven programming model. UI components register event handlers for user interactions, such as button clicks and command submissions. When an event occurs, JavaFX dispatches it to the corresponding handler.
+
+For command execution, the command box's event handler retrieves the entered command and passes it to the `Logic` component. The resulting `CommandResult` is then used to update the result display or trigger other UI actions, such as opening a contact details window.
+
+The UI also observes changes to the model's contact list. When the model updates its observable list, the corresponding UI components are refreshed automatically.
+
 ### Logic component
 
 **API** : [`Logic.java`](https://github.com/AY2627S1-CS2103T-W14-1/tp/tree/master/src/main/java/seedu/address/logic/Logic.java)
@@ -136,15 +144,6 @@ The `Model` component,
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
 * does not depend on any of the other three components (as the `Model` represents data entities of the domain, they should make sense on their own without depending on other components)
 
-
-<box type="info" seamless>
-
-**Note:** The alternative, arguably more object-oriented, design below keeps a unique list of tags in `AddressBook`, and each `Person` references tags from that list. This lets `AddressBook` maintain one `Tag` object per unique tag instead of each `Person` holding its own `Tag` objects.<br>
-
-<puml src="diagrams/BetterModelClassDiagram.puml" width="450" />
-</box>
-
-
 ### Storage component
 
 **API** : [`Storage.java`](https://github.com/AY2627S1-CS2103T-W14-1/tp/tree/master/src/main/java/seedu/address/storage/Storage.java)
@@ -168,7 +167,7 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
-### Add command parsing
+### Adding contacts and assigning identifiers
 
 The CampusContacts development team has decided to allow duplicate names, and assign indices to them for identification. For clean storing & restoring these indices upon reload, and efficient reuse of free indices, our team takes the following two-step approach to adding a person:
 
@@ -280,7 +279,9 @@ The `show NAME[_NUMBER]` command lets users view the complete stored details of 
 1. `ShowCommand` looks for the matching name and `PersonIndex` in the filtered contact list.
 1. On success, it returns a `CommandResult` containing the selected `Person`.
 1. `MainWindow` recognises that result and opens `ContactDetailsWindow`.
-1. The popup displays the contact's display name, ID, phone number, email, location, and tags.
+1. The popup displays the contact's display name, ID, role, phone number, email, location, tags, and photo where available.
+1. If the contact is a `Student`, major and/or year may also be displayed where available.
+1. If the contact is a `Professor`, faculty, department and/or office hours may also be displayed where available.
 
 The popup is deliberately a UI concern: the command resolves a model object. `LogicManager`
 records a successful selection in the recently viewed history and attempts to save it before
@@ -485,8 +486,12 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
 | `* *`    | user                                       | record a contact's faculty/department | remember where they belong within the university               |
 | `* *`    | user                                       | add notes about a contact    | remember the context in which I know them                              |
 | `* *`    | user                                       | filter contacts by student/staff role | narrow down my contact list                                    |
+| `* *`    | user                                       | attach a photo to a contact | recognise the person more easily                                    |
+| `* *`    | user                                       | view recently accessed contacts | quickly return to profiles I viewed earlier                                    |
+| `* *`    | user                                       | sort contacts by different attributes | find contacts in a convenient order                                    |
+| `* *`    | user                                       | mark contacts as favourites | access frequently needed contacts quickly                                    |
+| `* *`    | user                                       | distinguish contacts with identical names | select the correct person                                    |
 | `*`      | user                                       | group contacts by modules/projects | find related people much easier                                  |
-| `*`      | user                                       | mark important contacts as favourites | access the people I frequently need much faster                 |
 
 ### Use cases
 
@@ -514,6 +519,95 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
     * 1b1. System assigns the contact an index in that name bucket and displays a suffix when needed to distinguish it.
 
       Use case ends.
+
+**Use case: Edit a contact**
+
+**MSS**
+
+1. User requests to edit an existing contact by providing its display name and the fields to change.
+2. System validates the supplied fields and updates the contact.
+3. System displays a success message.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The provided name does not match any existing contact.
+  
+  * 1a1. System displays an error message.
+    
+    Use case ends.
+    
+* 2a. One or more supplied fields are invalid.
+  
+  * 2a1. System displays an error message and does not apply the invalid changes.
+    
+    Use case ends.
+
+**Use case: Add favourite contacts**
+
+**MSS**
+
+1. User requests to mark an existing contact as a favourite.
+2. System adds the contact to the favourite selection and displays a success message.
+3. User requests to view favourite contacts.
+4. System displays the selected contacts in the user's chosen sort order.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The contact is already a favourite.
+  
+  * 1a1. System informs the user that the contact is already a favourite.
+    
+    Use case ends.
+    
+* 1b. The contact does not exist.
+  
+  * 1b1. System displays an error message.
+    
+    Use case ends.
+
+**Use case: Remove favourite contacts**
+
+**MSS**
+
+1. User requests to unmark an existing contact as a favourite.
+2. System removes the contact from the favourite selection and displays a success message.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The contact is already not a favourite.
+  
+  * 1a1. System informs the user that the contact is already not a favourite.
+    
+    Use case ends.
+  
+* 1b. The contact does not exist.
+  
+  * 1b1. System displays an error message.
+    
+    Use case ends.
+
+**Use case: Sort contacts**
+
+**MSS**
+
+1. User requests to sort the displayed contacts using a supported attribute and direction.
+2. System displays the contacts in the requested order.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The user supplies an unsupported sorting attribute or direction.
+  
+  * 1a1. System displays an error message without changing the current sort order.
+    
+    Use case ends.
 
 **Use case: Delete a contact**
 
@@ -604,12 +698,19 @@ testers are expected to do more *exploratory* testing.
    1. Double-click the JAR file.<br>
       Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
 
+1. Closing CampusContacts and subsequent launches
+
+   1. Close the window.
+      
+   1. Double-click the JAR file in the same folder.>br?
+      Expected: The GUI opens with all previous contacts saved automatically.
+   
 1. Saving window preferences
 
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
    1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
+      Expected: The most recent window size and location are retained.
 
 1. _{ more test cases … }_
 
@@ -666,6 +767,35 @@ Use a disposable data folder. Add two contacts named John Tan with different pho
 1. Delete the favourite, add another contact with the same name, and run `favourites`. The replacement must not inherit the selection.
 1. Mark a contact; run `clear`, then `no`. Its selection should remain. Repeat `clear`, then `yes`: contacts and selections should both be empty after restart.
 
+### Editing a person
+
+Use a disposable data folder and add two contacts named John Tan with different phone numbers.
+
+1. Editing a contact's basic details
+
+   1. Test case: `edit John Tan /phone 91234567`<br>
+   Expected: The phone number of the unsuffixed John Tan is updated, while John Tan_2 remains unchanged.
+
+2. Editing a duplicate-name contact
+
+   1. Test case: `edit John Tan_2 /phone 98765432`<br>
+   Expected: Only the second John Tan is updated.
+
+3. Clearing an optional field
+
+   1. Test case: `edit John Tan /major [blank]`<br>
+   Expected: The contact's major is cleared, while other fields remain unchanged.
+
+4. Editing a contact while another contact is displayed
+
+   1. Test case: Run `find Jane`, followed by `edit John Tan /phone 91234567`.<br>
+   Expected: John Tan is updated even though the displayed list only contains Jane Lim.
+
+5. Editing a nonexistent contact
+
+   1. Test case: `edit Nonexistent Person /phone 91234567`<br>
+   Expected: No contact is modified. The result area displays an error message.
+
 ### Deleting a person
 
 1. Deleting a person while all persons are being shown
@@ -678,13 +808,150 @@ Use a disposable data folder. Add two contacts named John Tan with different pho
    1. Test case: `delete John Tan_2`<br>
       Expected: The contact displayed as John Tan_2 is deleted, while the unsuffixed John Tan remains.
 
-   1. Test case: `delete John Tan_0`<br>
+   1. Test case: `delete Jane Lim`<br>
       Expected: No person is deleted. The status message shows error details.
 
    1. Other incorrect delete commands to try: `delete`, `delete John Tan_`, `delete John Tan_0`<br>
       Expected: Similar to previous.
 
-1. _{ more test cases … }_
+2. Deleting a person while a different search result is displayed
+   
+   1. Prerequisites: Add contacts named John Tan and Jane Lim.
+     
+   1. Test case: Run `find Jane`, followed by `delete John Tan`.<br>
+      Expected: John Tan is deleted even though the displayed list only contains Jane Lim.
+
+### Sorting
+
+Use a disposable data folder. Add several contacts with different names and phone numbers, including two contacts named John Tan with different phone numbers.
+
+1. Sorting by name
+
+   1. Test case: `sort name asc`<br>
+   Expected: Contacts are displayed in ascending alphabetical order of their names.
+
+   2. Test case: `sort name desc`<br>
+   Expected: Contacts are displayed in descending alphabetical order of their names.
+
+2. Sorting by phone number
+
+   1. Test case: `sort phone asc`<br>
+   Expected: Contacts are displayed in ascending order of their phone numbers.
+
+   2. Test case: `sort phone desc`<br>
+   Expected: Contacts are displayed in descending order of their phone numbers.
+
+3. Sorting by creation time
+
+   1. Prerequisites: Add three contacts, one after another, with a short delay between additions.
+
+   2. Test case: `sort add asc`<br>
+   Expected: Contacts are displayed from most recently created to oldest.
+
+   3. Test case: `sort add desc`<br>
+   Expected: Contacts are displayed from oldest to most recently created.
+
+4. Sorting by last-edited time
+
+   1. Prerequisites: Add three contacts, then edit them one after another, with a short delay between edits.
+
+   2. Test case: `sort edit asc`<br>
+   Expected: Contacts are displayed from most recently edited to least recently edited.
+
+   3. Test case: `sort edit desc`<br>
+   Expected: Contacts are displayed from least recently edited to most recently edited.
+
+5. Sorting duplicate-name contacts
+
+   1. Prerequisites: Add two contacts named John Tan with different phone numbers.
+
+   2. Test case: `sort name asc`<br>
+   Expected: John Tan appears before John Tan_2.
+
+   3. Test case: `sort name desc`<br>
+   Expected: The duplicate-name contacts remain in deterministic index order, with John Tan appearing before John Tan_2.
+
+6. Sorting while a filter is active
+
+   1. Prerequisites: Add several contacts with different names.
+
+   2. Test case: Run `find John`, followed by `sort name desc`.<br>
+   Expected: Only matching contacts are displayed, in descending alphabetical order.
+
+   3. Test case: Run `list`.<br>
+   Expected: All contacts are displayed using the saved sort order.
+
+7. Interaction with recently viewed contacts
+
+   1. Prerequisites: View several contacts using the `show` command.
+
+   2. Test case: Run `sort name desc`, followed by `recent`.<br>
+   Expected: Contacts are displayed in recently viewed order, newest first.
+
+   3. Test case: Run `list`.<br>
+   Expected: All contacts are displayed using the previously selected name-descending sort order.
+
+8. Invalid sorting commands
+
+   1. Test cases: `sort`, `sort invalid asc`, `sort name invalid`, and `sort name asc extra`.<br>
+   Expected: Each command displays an appropriate error message without changing the current sort order.
+
+### Contact photos
+
+Use a disposable data folder. Prepare image files in PNG, JPG, JPEG, and GIF formats.
+
+1. Adding a contact with a photo
+
+   1. Test case: Add a contact with a valid PNG photo using the `/photo` prefix.<br>
+   Expected: The contact is added successfully and its photo is displayed.
+
+   2. Test case: Repeat using JPG, JPEG, and GIF files.<br>
+   Expected: All four supported image formats are accepted.
+
+2. Editing a contact's photo
+
+   1. Prerequisites: Add a contact without a photo.
+
+   2. Test case: Edit the contact and supply a valid image using `/photo`.<br>
+   Expected: The contact's photo is updated and displayed.
+
+   3. Test case: Replace the existing photo with another valid image.<br>
+   Expected: The new photo is displayed instead of the previous one.
+
+3. Removing a contact's photo
+
+   1. Prerequisites: Add a contact with a photo.
+
+   2. Test case: `edit John Tan /photo [blank]`<br>
+   Expected: The contact's photo is removed.
+
+4. Persistence of contact photos
+
+   1. Prerequisites: Add several contacts with photos in different supported formats.
+
+   2. Test case: Close the application and relaunch it using the same data folder.<br>
+   Expected: All contacts retain their respective photos.
+
+5. Invalid photo files
+
+   1. Test case: Attempt to add a contact using an unsupported image format.<br>
+   Expected: The command is rejected and the contact is not added.
+
+   2. Test case: Attempt to edit a contact using an unsupported image format.<br>
+   Expected: The command is rejected and the existing contact details and photo remain unchanged.
+
+   3. Test case: Attempt to add or edit a contact using a nonexistent image file.<br>
+   Expected: The command is rejected without leaving an invalid photo reference.
+
+6. Photo cleanup after replacement or removal
+
+   1. Prerequisites: Add a contact with a photo and note the corresponding file in the `photos` directory.
+
+   2. Test case: Replace the photo with another image and allow the command to save successfully.<br>
+   Expected: The new photo is retained, and the old managed photo file is removed if it is no longer referenced by any contact.
+
+   3. Test case: Remove the contact's photo using `/photo [blank]` and allow the command to save successfully.<br>
+   Expected: The contact no longer references a photo, and the unreferenced managed photo file is removed.
 
 ### Saving data
 
