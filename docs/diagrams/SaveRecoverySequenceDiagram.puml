@@ -1,0 +1,40 @@
+@startuml
+!include style.puml
+
+actor User
+participant "LogicManager" as Logic LOGIC_COLOR
+participant "Model" as Model MODEL_COLOR
+participant "Storage" as Storage STORAGE_COLOR
+participant "MainWindow" as UI UI_COLOR
+
+User -> UI: enter a mutating command
+UI -> Logic: execute(commandText)
+Logic -> Model: execute command
+Model --> Logic: command result
+Logic -> Storage: saveAddressBook(current state)
+
+alt save succeeds
+    Storage --> Logic: success
+    Logic --> UI: result
+    UI --> User: display result
+else save fails
+    Storage --> Logic: IOException
+    Logic -> Model: restore recent-history snapshot
+    Logic --> UI: result + retry warning
+    UI --> User: display warning
+    note right of Logic
+      The in-memory change remains applied.
+      The next command retries the save.
+    end note
+end
+
+User -> UI: enter exit
+UI -> Logic: execute("exit")
+alt unsaved changes remain
+    Logic --> UI: request Yes/no confirmation
+    UI --> User: ask whether to exit anyway
+else no unsaved changes
+    Logic --> UI: exit result
+    UI --> User: close application
+end
+@enduml

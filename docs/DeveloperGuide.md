@@ -85,6 +85,14 @@ The `UI` component,
 * depends on some classes in the `Model` component because it displays `Person` objects from the model.
 * opens a `ContactDetailsWindow` when a successful `show` command returns a selected contact in its `CommandResult`.
 
+#### Event-driven UI interactions
+
+The UI uses JavaFX's event-driven programming model. UI components register event handlers for user interactions, such as button clicks and command submissions. When an event occurs, JavaFX dispatches it to the corresponding handler.
+
+For command execution, the command box's event handler retrieves the entered command and passes it to the `Logic` component. The resulting `CommandResult` is then used to update the result display or trigger other UI actions, such as opening a contact details window.
+
+The UI also observes changes to the model's contact list. When the model updates its observable list, the corresponding UI components are refreshed automatically.
+
 ### Logic component
 
 **API** : [`Logic.java`](https://github.com/AY2627S1-CS2103T-W14-1/tp/tree/master/src/main/java/seedu/address/logic/Logic.java)
@@ -130,7 +138,7 @@ How the parsing works:
 The `Model` component,
 
 * stores address book data in a `UniquePersonHashMap`. It groups contacts by their base name and stores each group in a `TreeMap<Integer, Person>`.
-* [gives each stored contact a `PersonIndex`](#add-command-parsing). The first contact in a name bucket has index `0` and is displayed without a suffix; subsequent contacts are displayed with a suffix derived from their 1-based index, such as `John Tan_2`.
+* [gives each stored contact a `PersonIndex`](#adding-contacts-and-assigning-identifiers). The first contact in a name bucket has index `0` and is displayed without a suffix; subsequent contacts are displayed with a suffix derived from their 1-based index, such as `John Tan_2`.
 * keeps an unmodifiable flattened `ObservableList<Person>` ordered by base name and then bucket index. This preserves a straightforward list for the existing UI and filtered views.
 * stores the `Person` objects selected by the current filter, such as search results, in a separate _filtered_ list. It exposes this list as an unmodifiable `ObservableList<Person>` that the UI can observe and bind to, so the UI updates when the list changes.
 * stores a `UserPrefs` object that represents the user’s preferences (currently, just the GUI settings). This is exposed to the outside as a `ReadOnlyUserPrefs` object.
@@ -159,21 +167,6 @@ Classes used by multiple components are in the `seedu.address.commons` package.
 
 This section describes some noteworthy details on how certain features are implemented.
 
-### Add command parsing
-
-The CampusContacts development team has decided to allow duplicate names, and assign indices to them for identification. For clean storing & restoring these indices upon reload, and efficient reuse of free indices, our team takes the following two-step approach to adding a person:
-
-1. When a new contact is added, the command first supplies the model with an immutable `UnindexedPerson`. This object carries the validated contact details but has no `PersonIndex`, so it is not stored directly. 
-2. `UniquePersonHashMap` finds the contact’s name bucket, allocates the smallest available zero-based index, and calls `UnindexedPerson#withPersonIndex(...)` to create the indexed `Person` that is inserted into the bucket.
-
-The original `UnindexedPerson` is no longer referenced after this operation and becomes eligible for garbage collection; it is not explicitly destroyed by the program.
-
-After insertion, the name bucket remains ordered by index, while the outer map keeps contacts grouped by base name. The flattened observable list is then rebuilt in name-and-index order so existing list and filtered views receive the updated data. This separation allows parsing and command execution to work with a temporary unindexed value while the model remains responsible for assigning storage identity.
-
-Here's a visualization of adding a person in action:
-
-<puml src="diagrams/AddSequenceDiagram.puml" alt="Parsing and executing an add command" />
-
 ### Contact identity and name-bucket storage
 
 CampusContacts allows several contacts to share the same name. `AddressBook` owns a `UniquePersonHashMap`, whose outer `TreeMap` groups contacts by name. Each group is a `PersonNameBucket` containing:
@@ -201,6 +194,39 @@ The storage snapshot is structured as follows:
 
 On startup, `JsonSerializableAddressBook` validates each bucket, recreates the indexed `Person` objects from the nested map keys, and passes the result to `AddressBook#setPersonBuckets`. The name bucket rebuilds its released-index queue and next-index value once. Normal add, delete, and edit operations use the in-memory map; `LogicManager` subsequently saves a snapshot through `Storage`.
 
+### Adding contacts and assigning identifiers
+
+Parsing, command execution, and identifier assignment are separate steps. `AddCommandParser`
+validates the input and creates an immutable `UnindexedPerson`; `AddCommand` passes that
+value to the model, which is the only component responsible for assigning a `PersonIndex`.
+
+`UniquePersonHashMap` finds the contact's name bucket, allocates the smallest available
+zero-based index, and calls `UnindexedPerson#withPersonIndex(...)` to create the indexed
+`Person`. It inserts that `Person` into the bucket and refreshes the flattened observable
+list used by the UI. The temporary unindexed value is not stored after conversion.
+
+The flow is split into parsing and execution below. Together, the diagrams show the full
+add operation while keeping the parser's validation responsibilities distinct from the
+model's identity-assignment responsibilities.
+
+<puml src="diagrams/AddParsingSequenceDiagram.puml" alt="Parsing an add command" />
+<puml src="diagrams/AddExecutionSequenceDiagram.puml" alt="Executing an add command and assigning its identifier" />
+
+### Roles, edit history, and sorting
+
+Contacts have one of two normalized roles: `student` or `professor`. The model uses the
+`Student` and `Professor` subclasses to hold role-specific fields. Student contacts may
+have a major and year, while professor contacts may have a faculty, department, and office
+hours. The parser rejects fields belonging to the other role, so invalid combinations are
+stopped before they reach the model.
+
+Each stored contact also has `createdAt` and `lastEditedAt` timestamps. They are persisted
+with the contact and are used by `sort add` and `sort edit`. The supported sort fields are
+`name`, `phone`, `add`, and `edit`. For timestamp fields, ascending order means most recent
+first. Name sorting uses the `PersonIndex` as a tie-breaker, which keeps duplicate names
+deterministic even when the direction is reversed. Legacy contacts without timestamps are
+given one migration timestamp when loaded.
+
 ### Exclusive access to the data folder
 
 `MainApp` acquires a `DataFileLock` before reading contacts or initializing preferences (which also writes to disk).
@@ -217,9 +243,36 @@ that do not acquire this lock from changing the JSON file.
 
 ### Contact photo storage
 
-A contact may have an optional `Photo` reference. When a photo is supplied to `add`, `StorageManager` delegates copying it into the application's `photos` directory to `PhotoStorage`; the contact keeps the returned relative path. `JsonAdaptedPerson` writes that reference to JSON, so the application can resolve the copied photo after restarting. The diagram focuses on the photo-specific fields and storage API; unrelated address-book storage details are omitted.
+A contact may have an optional `Photo` reference. When a photo is supplied to `add` or
+`edit`, `LogicManager` validates the source and asks `StorageManager` to copy it into the
+`photos` directory beside the data file. The contact stores only the generated relative
+path, and `JsonAdaptedPerson` persists that path so the photo can be resolved after a
+restart. PNG, JPG, JPEG, and GIF files are supported. `edit ... /photo [blank]` removes a
+photo.
+
+Photo files are managed separately from the JSON snapshot. After a successful save,
+`StorageManager` removes managed photo files that are no longer referenced by any contact.
+If importing a photo or applying the command fails, the newly copied file is removed so a
+failed command does not leave an orphaned photo.
 
 <puml src="diagrams/PhotoStorageClassDiagram.puml" alt="Class diagram of contact photo references and photo storage" width="550" />
+
+### Data recovery and save failures
+
+If loading the address-book file fails, the application starts with an empty address book
+and first preserves the unreadable file in `data/backups/` using a timestamped `.bak` name.
+This gives the user a copy to inspect or restore instead of silently overwriting the
+original. A legacy flat `persons` file is loaded with missing roles migrated to `student`,
+then rewritten in the nested `personsByName` format on the next successful save.
+
+Normal command execution also treats persistence failures explicitly. The command's
+in-memory change remains applied, but the failed save marks the session as having unsaved
+changes. The next command retries the save. If the user attempts to exit while changes are
+still unsaved, the application asks for `yes` to exit anyway; any other response cancels
+the exit. Recent-contact history is restored when a save fails, so a failed `show` does not
+persist a history change.
+
+<puml src="diagrams/SaveRecoverySequenceDiagram.puml" alt="Save failure recovery and exit confirmation sequence" />
 
 ### Show contact details feature
 
@@ -230,9 +283,14 @@ The `show NAME[_NUMBER]` command lets users view the complete stored details of 
 1. On success, it returns a `CommandResult` containing the selected `Person`.
 1. `MainWindow` recognises that result and opens `ContactDetailsWindow`.
 1. The popup displays the contact's display name, ID, role, phone number, email, location, role-specific academic details, tags, creation and edit timestamps, and photo.
+1. If the contact is a `Student`, major and/or year may also be displayed where available.
+1. If the contact is a `Professor`, faculty, department and/or office hours may also be displayed where available.
 
-The popup is deliberately a UI concern: the command resolves a model object. `LogicManager` records a successful
-selection in the recently viewed history, saves the address book, then returns the result to the UI.
+The popup is deliberately a UI concern: the command resolves a model object. `LogicManager`
+records a successful selection in the recently viewed history and attempts to save it before
+returning the result to the UI. If saving fails, the history change is rolled back and a
+warning is shown, but the selected contact is still returned to the UI and its details
+window still opens; the save is retried by a later command.
 
 ### Recently viewed contacts
 
@@ -244,7 +302,9 @@ distinct contact removes the oldest entry. Callers receive an immutable copy of 
 
 `ShowCommand` finds a contact in the address book and returns it in `CommandResult`.
 `LogicManager` then records the visit and saves the address book. If saving throws `IOException`, including
-a permission error, it restores the previous history and reports the error instead of opening the popup.
+a permission error, it restores the previous history and reports the error. The result still
+contains the selected contact, so the popup opens even though the history update was not
+persisted.
 A failed contact lookup leaves history unchanged.
 
 `RecentCommand` asks `ModelManager` to show contacts in history order using the existing `FilteredList`
@@ -259,7 +319,7 @@ Deleting a contact removes its history entry before the suffix can be reused. Ed
 its position in history and keeps the recent view active; if its name changes, the history entry is updated
 to the new display name. Replacing or clearing the address book also replaces the history.
 
-An ordered list is enough for this feature: it avoids timestamps, tied visit times and changes to profile
+An ordered list is enough for this feature: it avoids visit timestamps, tied visit times and changes to profile
 constructors. Tests cover the ten-contact limit, repeat visits, duplicate names, filters, sorting, storage,
 photos, deletion, clear confirmation and failed saves. Manual checks are listed below.
 
@@ -427,8 +487,11 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
 | `* *`    | user                  | record a contact's faculty/department      | remember where they belong within the university               |
 | `* *`    | user                  | add notes about a contact                  | remember the context in which I know them                      |
 | `* *`    | user                  | filter contacts by student/staff role      | narrow down my contact list                                    |
-| `* *`    | user                  | view recently accessed contacts            | quickly re-examine contacts I recently checked                 |
-| `* *`    | user                  | sort contacts by different fields          | organize the contact list to suit my current task              |
+| `* *`    | user                  | attach a photo to a contact                | recognise the person more easily                               |
+| `* *`    | user                  | view recently accessed contacts            | quickly return to profiles I viewed earlier                    |
+| `* *`    | user                  | sort contacts by different attributes      | find contacts in a convenient order                            |
+| `* *`    | user                  | mark contacts as favourites                | access frequently needed contacts quickly                      |
+| `* *`    | user                  | distinguish contacts with identical names  | select the correct person                                      |
 | `*`      | user                  | group contacts by modules/projects         | find related people much easier                                |
 | `*`      | user                  | mark important contacts as favourites      | access the people I frequently need much faster                |
 
@@ -458,6 +521,95 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
     * 1b1. System assigns the contact an index in that name bucket and displays a suffix when needed to distinguish it.
 
       Use case ends.
+
+**Use case: Edit a contact**
+
+**MSS**
+
+1. User requests to edit an existing contact by providing its display name and the fields to change.
+2. System validates the supplied fields and updates the contact.
+3. System displays a success message.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The provided name does not match any existing contact.
+  
+  * 1a1. System displays an error message.
+    
+    Use case ends.
+    
+* 2a. One or more supplied fields are invalid.
+  
+  * 2a1. System displays an error message and does not apply the invalid changes.
+    
+    Use case ends.
+
+**Use case: Add favourite contacts**
+
+**MSS**
+
+1. User requests to mark an existing contact as a favourite.
+2. System adds the contact to the favourite selection and displays a success message.
+3. User requests to view favourite contacts.
+4. System displays the selected contacts in the user's chosen sort order.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The contact is already a favourite.
+  
+  * 1a1. System informs the user that the contact is already a favourite.
+    
+    Use case ends.
+    
+* 1b. The contact does not exist.
+  
+  * 1b1. System displays an error message.
+    
+    Use case ends.
+
+**Use case: Remove favourite contacts**
+
+**MSS**
+
+1. User requests to unmark an existing contact as a favourite.
+2. System removes the contact from the favourite selection and displays a success message.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The contact is already not a favourite.
+  
+  * 1a1. System informs the user that the contact is already not a favourite.
+    
+    Use case ends.
+  
+* 1b. The contact does not exist.
+  
+  * 1b1. System displays an error message.
+    
+    Use case ends.
+
+**Use case: Sort contacts**
+
+**MSS**
+
+1. User requests to sort the displayed contacts using a supported attribute and direction.
+2. System displays the contacts in the requested order.
+
+Use case ends.
+
+**Extensions**
+
+* 1a. The user supplies an unsupported sorting attribute or direction.
+  
+  * 1a1. System displays an error message without changing the current sort order.
+    
+    Use case ends.
 
 **Use case: Delete a contact**
 
@@ -548,12 +700,19 @@ testers are expected to do more *exploratory* testing.
    1. Double-click the JAR file.<br>
       Expected: The GUI opens with a set of sample contacts. The window size may not be optimal.
 
+1. Closing CampusContacts and subsequent launches
+
+   1. Close the window.
+      
+   1. Double-click the JAR file in the same folder.<br>
+      Expected: The GUI opens with all previous contacts saved automatically.
+   
 1. Saving window preferences
 
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
 
    1. Relaunch the app by double-clicking the JAR file.<br>
-       Expected: The most recent window size and location are retained.
+      Expected: The most recent window size and location are retained.
 
 ### Adding a person
 
@@ -575,13 +734,33 @@ testers are expected to do more *exploratory* testing.
     1. Test case: `edit David Li /phone 98887777 /location Kent Ridge Hall`<br>
        Expected: Phone number and location updated for the unsuffixed David Li.
 
+1. Editing a duplicate-name contact
+
+    1. Test case: `edit John Tan_2 /phone 98765432`<br>
+       Expected: Only the second John Tan is updated.
+
+1. Clearing an optional field
+
+    1. Test case: `edit John Tan /major [blank]`<br>
+       Expected: The contact's major is cleared, while other fields remain unchanged.
+
 1. Clearing tags
     1. Test case: `edit David Li t/`<br>
        Expected: All tags cleared from David Li.
 
+1. Editing a contact while another contact is displayed
+
+    1. Test case: Run `find Jane`, followed by `edit John Tan /phone 91234567`.<br>
+       Expected: John Tan is updated even though the displayed list only contains Jane Lim.
+
 1. Role field restriction on edit
     1. Test case: `edit David Li /faculty Computing`<br>
        Expected: Error indicating students cannot have faculty. Contact remains unchanged.
+
+1. Editing a nonexistent contact
+
+    1. Test case: `edit Nonexistent Person /phone 91234567`<br>
+       Expected: No contact is modified. The result area displays an error message.
 
 ### Finding contacts
 
@@ -599,13 +778,91 @@ testers are expected to do more *exploratory* testing.
 
 ### Sorting contacts
 
-1. Sorting reverse alphabetically
-    1. Test case: `sort name desc`<br>
-       Expected: Contacts sorted reverse alphabetically. Duplicate suffixes also appear in reverse order (e.g. `David Li_2` before `David Li`).
+1. Sorting by name
 
-1. Sorting by edit time
-    1. Test case: `sort edit`<br>
-       Expected: Most recently edited contacts appear at the top.
+    1. Test case: `sort name asc`<br>
+       Expected: Contacts are displayed in ascending alphabetical order of their names.
+
+    2. Test case: `sort name desc`<br>
+       Expected: Contacts are displayed in descending alphabetical order of their names. Duplicate suffixes also appear in reverse order (e.g. `David Li_2` before `David Li`).
+
+2. Sorting by phone number
+
+    1. Test case: `sort phone asc`<br>
+       Expected: Contacts are displayed in ascending order of their phone numbers.
+
+    2. Test case: `sort phone desc`<br>
+       Expected: Contacts are displayed in descending order of their phone numbers.
+
+3. Sorting by creation time
+
+    1. Prerequisites: Add three contacts, one after another, with a short delay between additions.
+
+    2. Test case: `sort add asc`<br>
+       Expected: Contacts are displayed from most recently created to oldest.
+
+    3. Test case: `sort add desc`<br>
+       Expected: Contacts are displayed from oldest to most recently created.
+
+4. Sorting by last-edited time
+
+    1. Prerequisites: Add three contacts, then edit them one after another, with a short delay between edits.
+
+    2. Test case: `sort edit asc`<br>
+       Expected: Contacts are displayed from most recently edited to least recently edited.
+
+    3. Test case: `sort edit desc`<br>
+       Expected: Contacts are displayed from least recently edited to most recently edited.
+
+5. Sorting while a filter is active
+
+    1. Prerequisites: Add several contacts with different names.
+
+    2. Test case: Run `find John`, followed by `sort name desc`.<br>
+       Expected: Only matching contacts are displayed, in descending alphabetical order.
+
+    3. Test case: Run `list`.<br>
+       Expected: All contacts are displayed using the saved sort order.
+
+6. Interaction with recently viewed contacts
+
+    1. Prerequisites: View several contacts using the `show` command.
+
+    2. Test case: Run `sort name desc`, followed by `recent`.<br>
+       Expected: Contacts are displayed in recently viewed order, newest first.
+
+    3. Test case: Run `list`.<br>
+       Expected: All contacts are displayed using the previously selected name-descending sort order.
+
+7. Invalid sorting commands
+
+    1. Test cases: `sort`, `sort invalid asc`, `sort name invalid`, and `sort name asc extra`.<br>
+       Expected: Each command displays an appropriate error message without changing the current sort order.
+
+### Deleting a person
+
+1. Deleting a person while all persons are being shown
+
+    1. Prerequisites: List all persons using the `list` command, with multiple persons in the list.
+
+    1. Test case: `delete John Tan`<br>
+       Expected: The unsuffixed John Tan contact is deleted. The status message shows the deleted contact's details.
+
+    1. Test case: `delete John Tan_2`<br>
+       Expected: The contact displayed as John Tan_2 is deleted, while the unsuffixed John Tan remains.
+
+    1. Test case: `delete Jane Lim`<br>
+       Expected: No person is deleted. The status message shows error details.
+
+    1. Other incorrect delete commands to try: `delete`, `delete John Tan_`, `delete John Tan_0`<br>
+       Expected: Similar to previous.
+
+2. Deleting a person while a different search result is displayed
+
+    1. Prerequisites: Add contacts named John Tan and Jane Lim.
+
+    1. Test case: Run `find Jane`, followed by `delete John Tan`.<br>
+       Expected: John Tan is deleted even though the displayed list only contains Jane Lim.
 
 ### Clearing all entries
 
@@ -670,23 +927,62 @@ Use a disposable data folder. Add two contacts named John Tan with different pho
 1. Delete the favourite, add another contact with the same name, and run `favourites`. The replacement must not inherit the selection.
 1. Mark a contact; run `clear`, then `no`. Its selection should remain. Repeat `clear`, then `yes`: contacts and selections should both be empty after restart.
 
-### Deleting a person
+### Contact photos
 
-1. Deleting a person while all persons are being shown
+Use a disposable data folder. Prepare image files in PNG, JPG, JPEG, and GIF formats.
 
-   1. Prerequisites: List all persons using the `list` command, with multiple persons in the list.
+1. Adding a contact with a photo
 
-   1. Test case: `delete John Tan`<br>
-      Expected: The unsuffixed John Tan contact is deleted. The status message shows the deleted contact's details.
+   1. Test case: Add a contact with a valid PNG photo using the `/photo` prefix.<br>
+   Expected: The contact is added successfully and its photo is displayed.
 
-   1. Test case: `delete John Tan_2`<br>
-      Expected: The contact displayed as John Tan_2 is deleted, while the unsuffixed John Tan remains.
+   2. Test case: Repeat using JPG, JPEG, and GIF files.<br>
+   Expected: All four supported image formats are accepted.
 
-   1. Test case: `delete John Tan_0`<br>
-      Expected: No person is deleted. The status message shows error details.
+2. Editing a contact's photo
 
-   1. Other incorrect delete commands to try: `delete`, `delete John Tan_`, `delete John Tan_0`<br>
-      Expected: Similar to previous.
+   1. Prerequisites: Add a contact without a photo.
+
+   2. Test case: Edit the contact and supply a valid image using `/photo`.<br>
+   Expected: The contact's photo is updated and displayed.
+
+   3. Test case: Replace the existing photo with another valid image.<br>
+   Expected: The new photo is displayed instead of the previous one.
+
+3. Removing a contact's photo
+
+   1. Prerequisites: Add a contact with a photo.
+
+   2. Test case: `edit John Tan /photo [blank]`<br>
+   Expected: The contact's photo is removed.
+
+4. Persistence of contact photos
+
+   1. Prerequisites: Add several contacts with photos in different supported formats.
+
+   2. Test case: Close the application and relaunch it using the same data folder.<br>
+   Expected: All contacts retain their respective photos.
+
+5. Invalid photo files
+
+   1. Test case: Attempt to add a contact using an unsupported image format.<br>
+   Expected: The command is rejected and the contact is not added.
+
+   2. Test case: Attempt to edit a contact using an unsupported image format.<br>
+   Expected: The command is rejected and the existing contact details and photo remain unchanged.
+
+   3. Test case: Attempt to add or edit a contact using a nonexistent image file.<br>
+   Expected: The command is rejected without leaving an invalid photo reference.
+
+6. Photo cleanup after replacement or removal
+
+   1. Prerequisites: Add a contact with a photo and note the corresponding file in the `photos` directory.
+
+   2. Test case: Replace the photo with another image and allow the command to save successfully.<br>
+   Expected: The new photo is retained, and the old managed photo file is removed if it is no longer referenced by any contact.
+
+   3. Test case: Remove the contact's photo using `/photo [blank]` and allow the command to save successfully.<br>
+   Expected: The contact no longer references a photo, and the unreferenced managed photo file is removed.
 
 ### Saving data
 

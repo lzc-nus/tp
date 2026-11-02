@@ -7,33 +7,24 @@ participant ":LogicManager" as LogicManager LOGIC_COLOR
 participant ":AddressBookParser" as AddressBookParser LOGIC_COLOR
 participant ":AddCommandParser" as AddCommandParser LOGIC_COLOR
 participant "a:AddCommand" as AddCommand LOGIC_COLOR
-participant "r:CommandResult" as CommandResult LOGIC_COLOR
 end box
 
 box Model MODEL_COLOR_T1
-participant "m:Model" as Model MODEL_COLOR
 participant "u:UnindexedPerson" as UnindexedPerson MODEL_COLOR
-participant "p:Person" as Person MODEL_COLOR
 end box
 
 [-> LogicManager : execute("add John Doe /role student\n/email ... /phone ... /location ...")
 activate LogicManager
-
 LogicManager -> AddressBookParser : parseCommand(userInput)
 activate AddressBookParser
-
 create AddCommandParser
-AddressBookParser -> AddCommandParser
-activate AddCommandParser
-AddCommandParser --> AddressBookParser
-deactivate AddCommandParser
-
 AddressBookParser -> AddCommandParser : parse(arguments)
 activate AddCommandParser
 
 note right of AddCommandParser
 Extracts the name and prefixed values,
-then validates the supplied fields.
+rejects missing or duplicate fields,
+and delegates value validation.
 end note
 
 create UnindexedPerson
@@ -41,50 +32,15 @@ AddCommandParser -> UnindexedPerson : new UnindexedPerson(details)
 activate UnindexedPerson
 UnindexedPerson --> AddCommandParser
 deactivate UnindexedPerson
-
 create AddCommand
 AddCommandParser -> AddCommand : new AddCommand(u)
 activate AddCommand
 AddCommand --> AddCommandParser
 deactivate AddCommand
-
 AddCommandParser --> AddressBookParser : a
 deactivate AddCommandParser
 AddressBookParser --> LogicManager : a
 deactivate AddressBookParser
-
-LogicManager -> AddCommand : execute(m)
-activate AddCommand
-
-AddCommand -> Model : addPerson(u)
-activate Model
-
-note right of UnindexedPerson
-Temporary validated details with no index.
-end note
-
-create Person
-Model -> Person : withPersonIndex()
-activate Person
-Person --> Model : indexed person
-deactivate Person
-Model -> Model : insert indexed person into name bucket
-note right of Person
-The indexed person is stored;
-the unindexed value is no longer referenced
-and becomes eligible for garbage collection.
-end note
-Model --> AddCommand : indexed person
-deactivate Model
-
-create CommandResult
-AddCommand -> CommandResult : success message
-activate CommandResult
-CommandResult --> AddCommand
-deactivate CommandResult
-
-AddCommand --> LogicManager : r
-deactivate AddCommand
 
 [<--LogicManager
 deactivate LogicManager
