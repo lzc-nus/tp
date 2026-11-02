@@ -704,7 +704,7 @@ testers are expected to do more *exploratory* testing.
 
    1. Close the window.
       
-   1. Double-click the JAR file in the same folder.>br?
+   1. Double-click the JAR file in the same folder.<br>
       Expected: The GUI opens with all previous contacts saved automatically.
    
 1. Saving window preferences
