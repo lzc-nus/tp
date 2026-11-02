@@ -53,8 +53,8 @@ class RecentWorkflowTest {
         assertEquals(List.of("John Tan_2", "John Tan"), model.getAddressBook().getRecentContacts());
         assertEquals("John Tan_2", model.getFilteredPersonList().getFirst().getDisplayName());
         model.updateFilteredPersonList(person -> false);
-        assertThrows(CommandException.class, () -> logic.execute("show John Tan"));
-        assertEquals(List.of("John Tan_2", "John Tan"), model.getAddressBook().getRecentContacts());
+        logic.execute("show John Tan");
+        assertEquals(List.of("John Tan", "John Tan_2"), model.getAddressBook().getRecentContacts());
     }
 
     @Test

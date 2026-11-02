@@ -39,8 +39,7 @@ public class HelpWindow extends UiPart<Stage> {
             2. SHOW CONTACT DETAILS
             Syntax: show NAME[_NUMBER]
             Opens the contact's full details.
-            The contact must be in the currently displayed list; use list first
-            if a filter hides it.
+            Works even when a filter hides the contact.
             Example: show John Tan_2
 
             3. EDIT A CONTACT
@@ -58,6 +57,7 @@ public class HelpWindow extends UiPart<Stage> {
             Use /photo FILE_PATH to add or replace a photo.
             Use /photo [blank] to remove it.
             Renaming assigns the smallest available suffix for the new name.
+            Renaming to the same name preserves the contact's current suffix.
             Examples:
               edit Alex Yeoh /phone 91234567
               edit Alex Yeoh /photo C:\\Users\\Student\\Pictures\\new.jpg

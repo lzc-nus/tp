@@ -49,10 +49,10 @@ deactivate AddressBookParser
 LogicManager -> DeleteCommand : execute(m)
 activate DeleteCommand
 
-DeleteCommand -> Model : getFilteredPersonList()
+DeleteCommand -> Model : getAddressBook().getPersonList()
 activate Model
 
-Model --> DeleteCommand : matching persons
+Model --> DeleteCommand : all persons
 deactivate Model
 
 DeleteCommand -> DeleteCommand : find name "John Tan" with fromOneBased(2)

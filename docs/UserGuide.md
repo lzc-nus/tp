@@ -182,23 +182,24 @@ Format: `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/locatio
 - When editing tags, all of the person's existing tags are removed; adding tags is not cumulative.
 - To remove all of a person's tags, enter `t/` without a tag after it.
 - Use `/photo FILE_PATH` to add or replace a contact photo. Use `/photo [blank]` to remove it.
-- Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. This happens even if the new name is the same as the old one.
+- You cannot assign professor fields (`/faculty`, `/department`, `/hours`) to a student, nor student fields (`/major`, `/year`) to a professor.
+- Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. If the new name is the same as the old one, the contact keeps its current suffix.
 
 Examples:
 * `edit John Doe /phone 91234567 /email johndoe@example.com` Edits the phone number and email address of John Doe.
 * `edit Alice /name Betsy Crower t/` Edits Alice's name to be `Betsy Crower` and clears all existing tags.
 * `edit John Doe /location UTown Residence` Edits the location of John Doe.
-* `edit John Doe_2 /name John Doe` reuses John Doe without suffix, if it is available.
 
 ### Showing a contact's details: `show`
 
-Opens a popup containing a contact's display name, contact ID, phone number, email, location, tags, and photo when one was added.
+Opens a popup containing a contact's display name, contact ID, role, phone number, email, location, role-specific details, tags, added/edited timestamps, and photo when one was added.
 
 Format: `show NAME[_NUMBER]`
 
 - Use the contact's displayed name.
 - The optional `_NUMBER` identifies a particular contact when several contacts have the same name.
 - If the suffix is omitted, CampusContacts selects the unsuffixed contact.
+- Showing works across the whole address book, even if the contact is hidden by the current filter.
 
 Examples:
 
@@ -211,15 +212,14 @@ Format: `recent` (no arguments)
 
 Shows the last ten different contacts opened with `show NAME[_NUMBER]`, most recent first.
 Opening the same contact again moves it to the front; opening an eleventh distinct contact removes the oldest
-from history, not from the address book. If `show` cannot find the contact, history stays unchanged. A save error also leaves
-history unchanged and prevents the popup from opening. Running `recent`, `list` or `sort` does not count as a visit.
+from history, not from the address book. If `show` cannot find the contact, history stays unchanged. If saving a successful
+`show` command fails, the history update is rolled back, a warning is shown, and the contact-details popup still opens.
+Running `recent`, `list` or `sort` does not count as a visit.
 
 `recent` replaces the current filter and temporarily uses history order rather than your selected sort.
 Reopening a contact while viewing `recent` immediately moves it to the front. `list` returns to all contacts
 in your saved sort order; adding a contact also returns to all contacts. `sort FIELD [asc|desc]` sorts the
 currently displayed matches as usual; run `recent` again to restore latest-first order.
-As with the existing `show` command, only contacts in the currently displayed list can be opened:
-run `list` first if the contact you want is hidden.
 
 History is saved automatically with your contacts. After a restart, run `recent` to see it again.
 Deleting a contact removes it from history. A new contact using the same name and suffix starts without
@@ -302,7 +302,9 @@ the same process.
 
 CampusContacts automatically saves data after every command. You do not need to save manually.
 
-Photos are stored separately in `[JAR file location]/data/photos`. Do not rename or delete files in this folder while their contacts still exist; otherwise their details popup will show that the photo is unavailable.
+The app stores its data under the working directory (the folder from which you launch the JAR): contacts are saved in
+`data/campuscontacts.json`, and photos are stored in `data/photos`. Do not rename or delete files in the photos folder
+while their contacts still exist; otherwise their details popup will show that the photo is unavailable.
 
 ### Editing the data file
 
@@ -311,7 +313,8 @@ the second launch displays an error; close the other instance before trying agai
 used independently. Do not delete or rename `data/campuscontacts.json.lock` while the application is running.
 It is normal for this file to remain after exit; it does not stop the next launch.
 
-CampusContacts data is saved automatically as a JSON file `[JAR file location]/data/campuscontacts.json`. Advanced users are welcome to update data directly by editing that data file.
+CampusContacts data is saved automatically as a JSON file at `data/campuscontacts.json` under the working directory
+from which you launch the JAR. Advanced users are welcome to update data directly by editing that data file.
 
 <box type="warning" seamless>
 
@@ -346,7 +349,7 @@ _Details coming soon ..._
 
 | Action          | Format, Examples                                                                                                                                                                                                                                                                                                                                         |
 |-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Add**         | `add NAME /role ROLE /email EMAIL /phone PHONE /location LOCATION [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH] [t/TAG or /tag TAG]...` <br> e.g., `add James Ho /role student /email jamesho@example.com /phone 22224444 /location COM1` (use only the optional fields for the chosen role) |
+| **Add**         | `add NAME /role ROLE /email EMAIL /phone PHONE /location LOCATION [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH] [t/TAG]...` <br> e.g., `add James Ho /role student /email jamesho@example.com /phone 22224444 /location COM1` (use only the optional fields for the chosen role) |
 | **Clear**       | `clear` _(Followed by `yes` to confirm or `no` to cancel)_                                                                                                                                                                                                                                                                                               |
 | **Delete**      | `delete NAME[_NUMBER]`<br> e.g., `delete Alex Yeoh`                                                                                                                                                                                                                                                                                                      |
 | **Edit**        | `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/location LOCATION] [/major MAJOR] [/year YEAR] [/faculty FACULTY] [/department DEPARTMENT] [/hours HOURS] [/photo FILE_PATH or [blank]] [t/TAG or /tag TAG]...`<br> e.g., `edit James Lee /phone 91234567 /email jameslee@example.com`                                                  |

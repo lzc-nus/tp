@@ -61,6 +61,16 @@ public class ShowCommandTest {
     }
 
     @Test
+    public void execute_filteredPerson_success() {
+        model.updateFilteredPersonList(person -> false); // hide all contacts in displayed list
+        Person personToShow = model.getAddressBook().getPersonList().getFirst();
+        ShowCommand showCommand = new ShowCommand(personToShow.getName().fullName, personToShow.getPersonIndex());
+        CommandResult expectedResult = new CommandResult(
+                String.format(ShowCommand.SHOWING_PERSON_MESSAGE, personToShow.getDisplayName()), personToShow);
+        assertCommandSuccess(showCommand, model, expectedResult, model);
+    }
+
+    @Test
     public void equals() {
         ShowCommand firstCommand = new ShowCommand("Alice Pauline");
         ShowCommand secondCommand = new ShowCommand("Benson Meier");

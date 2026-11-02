@@ -126,7 +126,7 @@ Here are the other classes in `Logic` (omitted from the class diagram above) tha
 How the parsing works:
 * When called upon to parse a user command, the `AddressBookParser` class creates an `XYZCommandParser` (`XYZ` is a placeholder for the specific command name, e.g., `AddCommandParser`). The parser uses the other classes shown above to parse the user command and create an `XYZCommand` object (e.g., `AddCommand`). The `AddressBookParser` returns that object as a `Command` object.
 * All `XYZCommandParser` classes, such as `AddCommandParser` and `DeleteCommandParser`, implement the `Parser` interface so they can be treated similarly where appropriate, for example during testing.
-* `AddCommandParser` recognises `/email`, `/phone`, and `/location`, and uses the tokenizer's preamble as the name. It rejects missing fields and duplicate required prefixes, then delegates value validation to `ParserUtil`. Location maps to the existing `Address` value object. Optional tags retain `t/`; edit parsing retains the existing AB3 prefixes. Storage and duplicate-name suffix allocation remain model/storage responsibilities, not parser responsibilities.
+* `AddCommandParser` recognises `/role`, `/email`, `/phone`, and `/location`, and uses the tokenizer's preamble as the name. It rejects missing fields and duplicate required prefixes, then delegates value validation to `ParserUtil`. Location maps to the existing `Address` value object. Optional tags retain `t/` (or `/tag`); `edit` and `find` use corresponding slash prefixes. Storage and duplicate-name suffix allocation remain model/storage responsibilities, not parser responsibilities.
 * `ShowCommandParser` and `DeleteCommandParser` accept `NAME[_NUMBER]`. The optional number selects a particular contact from a name bucket; omitting it selects the unsuffixed contact.
 
 ### Model component
@@ -279,10 +279,10 @@ persist a history change.
 The `show NAME[_NUMBER]` command lets users view the complete stored details of a specific contact without changing its profile fields. A successful selection updates the recently viewed history and, when the recent list is active, moves that contact to the front of the displayed list.
 
 1. `AddressBookParser` delegates the command text to `ShowCommandParser`.
-1. `ShowCommand` looks for the matching name and `PersonIndex` in the filtered contact list.
+1. `ShowCommand` looks for the matching name and `PersonIndex` in the address book.
 1. On success, it returns a `CommandResult` containing the selected `Person`.
 1. `MainWindow` recognises that result and opens `ContactDetailsWindow`.
-1. The popup displays the contact's display name, ID, role, phone number, email, location, tags, and photo where available.
+1. The popup displays the contact's display name, ID, role, phone number, email, location, role-specific academic details, tags, creation and edit timestamps, and photo.
 1. If the contact is a `Student`, major and/or year may also be displayed where available.
 1. If the contact is a `Professor`, faculty, department and/or office hours may also be displayed where available.
 
@@ -300,7 +300,7 @@ distinct contact removes the oldest entry. Callers receive an immutable copy of 
 
 <puml src="diagrams/RecentContactsSequenceDiagram.puml" alt="Recording a profile selection and handling save errors" />
 
-`ShowCommand` finds a contact in the displayed list and returns it in `CommandResult`.
+`ShowCommand` finds a contact in the address book and returns it in `CommandResult`.
 `LogicManager` then records the visit and saves the address book. If saving throws `IOException`, including
 a permission error, it restores the previous history and reports the error. The result still
 contains the selected contact, so the popup opens even though the history update was not
@@ -417,7 +417,7 @@ Step 5. The user then decides to execute the command `list`. Commands that do no
 
 <puml src="diagrams/UndoRedoState4.puml" alt="UndoRedoState4" />
 
-Step 6. The user executes `clear`, which calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: It no longer makes sense to redo the `add David …` command. This is the behavior that most modern desktop applications follow.
+Step 6. The user executes `clear` and confirms with `yes`, which calls `Model#commitAddressBook()`. Since the `currentStatePointer` is not pointing at the end of the `addressBookStateList`, all address book states after the `currentStatePointer` will be purged. Reason: It no longer makes sense to redo the `add David …` command. This is the behavior that most modern desktop applications follow.
 
 <puml src="diagrams/UndoRedoState5.puml" alt="UndoRedoState5" />
 
@@ -438,11 +438,9 @@ The following activity diagram summarizes what happens when a user executes a ne
   * Pros: Will use less memory (e.g. for `delete`, just save the person being deleted).
   * Cons: We must ensure that the implementation of each individual command is correct.
 
-_{more aspects and alternatives to be added}_
-
 ### \[Proposed\] Data archiving
 
-_{Explain here how the data archiving feature will be implemented}_
+An archiving command will allow users to export inactive or past-semester contacts into an archive JSON file under `data/archive/` while removing them from the active `campuscontacts.json` to maintain responsiveness.
 
 
 --------------------------------------------------------------------------------------------------------------------
@@ -475,26 +473,27 @@ _{Explain here how the data archiving feature will be implemented}_
 
 Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unlikely to have) - `*`
 
-| Priority | As a …                                    | I want to …                 | So that I can…                                                        |
-|----------|--------------------------------------------|------------------------------|------------------------------------------------------------------------|
-| `* * *`  | new user                                   | see usage instructions       | refer to instructions when I forget how to use the App                 |
-| `* * *`  | student                                    | add a teaching staff member  | easily retrieve their details when I need academic help                |
-| `* * *`  | teaching staff member                      | add a student                | identify and contact them when necessary                               |
-| `* * *`  | user                                       | specify if a contact is a student or staff | distinguish their role in the university               |
-| `* * *`  | user                                       | delete a contact by name     | remove entries that are no longer relevant                             |
-| `* * *`  | user                                       | view a saved contact's full details | identify the correct person before contacting or deleting them |
-| `* * *`  | user                                       | list all contacts            | see the list of people I have saved                                        |
-| `* * *`  | user                                       | search for a contact by name | quickly find a specific person                                         |
-| `* * *`    | user                                       | edit an existing contact    | keep information accurate when someone's details change            |
-| `* *`    | user                                       | record a contact's faculty/department | remember where they belong within the university               |
-| `* *`    | user                                       | add notes about a contact    | remember the context in which I know them                              |
-| `* *`    | user                                       | filter contacts by student/staff role | narrow down my contact list                                    |
-| `* *`    | user                                       | attach a photo to a contact | recognise the person more easily                                    |
-| `* *`    | user                                       | view recently accessed contacts | quickly return to profiles I viewed earlier                                    |
-| `* *`    | user                                       | sort contacts by different attributes | find contacts in a convenient order                                    |
-| `* *`    | user                                       | mark contacts as favourites | access frequently needed contacts quickly                                    |
-| `* *`    | user                                       | distinguish contacts with identical names | select the correct person                                    |
-| `*`      | user                                       | group contacts by modules/projects | find related people much easier                                  |
+| Priority | As a …                | I want to …                                | So that I can…                                                 |
+|----------|-----------------------|--------------------------------------------|----------------------------------------------------------------|
+| `* * *`  | new user              | see usage instructions                     | refer to instructions when I forget how to use the App         |
+| `* * *`  | student               | add a teaching staff member                | easily retrieve their details when I need academic help        |
+| `* * *`  | teaching staff member | add a student                              | identify and contact them when necessary                       |
+| `* * *`  | user                  | specify if a contact is a student or staff | distinguish their role in the university                       |
+| `* * *`  | user                  | delete a contact by name                   | remove entries that are no longer relevant                     |
+| `* * *`  | user                  | view a saved contact's full details        | identify the correct person before contacting or deleting them |
+| `* * *`  | user                  | list all contacts                          | see the list of people I have saved                            |
+| `* * *`  | user                  | search for a contact by name               | quickly find a specific person                                 |
+| `* * *`  | user                  | edit an existing contact                   | keep information accurate when someone's details change        |
+| `* *`    | user                  | record a contact's faculty/department      | remember where they belong within the university               |
+| `* *`    | user                  | add notes about a contact                  | remember the context in which I know them                      |
+| `* *`    | user                  | filter contacts by student/staff role      | narrow down my contact list                                    |
+| `* *`    | user                  | attach a photo to a contact                | recognise the person more easily                               |
+| `* *`    | user                  | view recently accessed contacts            | quickly return to profiles I viewed earlier                    |
+| `* *`    | user                  | sort contacts by different attributes      | find contacts in a convenient order                            |
+| `* *`    | user                  | mark contacts as favourites                | access frequently needed contacts quickly                      |
+| `* *`    | user                  | distinguish contacts with identical names  | select the correct person                                      |
+| `*`      | user                  | group contacts by modules/projects         | find related people much easier                                |
+| `*`      | user                  | mark important contacts as favourites      | access the people I frequently need much faster                |
 
 ### Use cases
 
@@ -504,7 +503,7 @@ Priorities: High (must have) - `* * *`, Medium (nice to have) - `* *`, Low (unli
 
 **MSS**
 
-1.  User requests to add a contact by providing their name, email, phone number, and location.
+1.  User requests to add a contact by providing their name, role, email, phone number, and location.
 2.  System adds the contact and displays a success message.
 
     Use case ends.
@@ -640,7 +639,7 @@ Use case ends.
 
 **Extensions**
 
-* 1a. The provided name and suffix do not identify a contact in the current list.
+* 1a. The provided name and suffix do not identify any contact in the address book.
 
   * 1a1. System shows an error message and does not open a popup.
 
@@ -650,7 +649,7 @@ Use case ends.
 
 **MSS**
 
-1.  User requests to search for a contact using a full or partial name.
+1.  User requests to search for contacts using keywords across one or more fields (e.g. name, role, location).
 2.  System searches through the stored contacts.
 3.  System displays a list of all matching contacts.
 
@@ -715,7 +714,175 @@ testers are expected to do more *exploratory* testing.
    1. Relaunch the app by double-clicking the JAR file.<br>
       Expected: The most recent window size and location are retained.
 
-1. _{ more test cases … }_
+### Adding a person
+
+1. Adding a student contact
+    1. Test case: `add David Li /role student /email david@example.com /phone 91234567 /location UTown /major Computer Science /year 2`<br>
+       Expected: Contact added as a student and displayed in the contact list.
+
+1. Adding a duplicate-name contact
+    1. Test case: `add David Li /role student /email davidli2@example.com /phone 81234567 /location PGPR /major Information Systems /year 1`<br>
+       Expected: Contact added and automatically assigned the suffix `David Li_2`.
+
+1. Role-specific field restriction
+    1. Test case: `add Betsy Crowe /role student /email betsy@example.com /phone 92345678 /location COM2 /faculty Computing`<br>
+       Expected: Error indicating students cannot have faculty, department, or office hours. No contact added.
+
+### Editing a person
+
+1. Editing contact details
+    1. Test case: `edit David Li /phone 98887777 /location Kent Ridge Hall`<br>
+       Expected: Phone number and location updated for the unsuffixed David Li.
+
+1. Editing a duplicate-name contact
+
+    1. Test case: `edit John Tan_2 /phone 98765432`<br>
+       Expected: Only the second John Tan is updated.
+
+1. Clearing an optional field
+
+    1. Test case: `edit John Tan /major [blank]`<br>
+       Expected: The contact's major is cleared, while other fields remain unchanged.
+
+1. Clearing tags
+    1. Test case: `edit David Li t/`<br>
+       Expected: All tags cleared from David Li.
+
+1. Editing a contact while another contact is displayed
+
+    1. Test case: Run `find Jane`, followed by `edit John Tan /phone 91234567`.<br>
+       Expected: John Tan is updated even though the displayed list only contains Jane Lim.
+
+1. Role field restriction on edit
+    1. Test case: `edit David Li /faculty Computing`<br>
+       Expected: Error indicating students cannot have faculty. Contact remains unchanged.
+
+1. Editing a nonexistent contact
+
+    1. Test case: `edit Nonexistent Person /phone 91234567`<br>
+       Expected: No contact is modified. The result area displays an error message.
+
+### Finding contacts
+
+1. Substring name match
+    1. Test case: `find David`<br>
+       Expected: Both `David Li` and `David Li_2` are displayed.
+
+1. Multi-field search (AND matching)
+    1. Test case: `find /role student /location Kent Ridge`<br>
+       Expected: Displays only students whose location contains "Kent Ridge".
+
+1. Resetting filter
+    1. Test case: `list`<br>
+       Expected: All contacts displayed.
+
+### Sorting contacts
+
+1. Sorting by name
+
+    1. Test case: `sort name asc`<br>
+       Expected: Contacts are displayed in ascending alphabetical order of their names.
+
+    2. Test case: `sort name desc`<br>
+       Expected: Contacts are displayed in descending alphabetical order of their names. Duplicate suffixes also appear in reverse order (e.g. `David Li_2` before `David Li`).
+
+2. Sorting by phone number
+
+    1. Test case: `sort phone asc`<br>
+       Expected: Contacts are displayed in ascending order of their phone numbers.
+
+    2. Test case: `sort phone desc`<br>
+       Expected: Contacts are displayed in descending order of their phone numbers.
+
+3. Sorting by creation time
+
+    1. Prerequisites: Add three contacts, one after another, with a short delay between additions.
+
+    2. Test case: `sort add asc`<br>
+       Expected: Contacts are displayed from most recently created to oldest.
+
+    3. Test case: `sort add desc`<br>
+       Expected: Contacts are displayed from oldest to most recently created.
+
+4. Sorting by last-edited time
+
+    1. Prerequisites: Add three contacts, then edit them one after another, with a short delay between edits.
+
+    2. Test case: `sort edit asc`<br>
+       Expected: Contacts are displayed from most recently edited to least recently edited.
+
+    3. Test case: `sort edit desc`<br>
+       Expected: Contacts are displayed from least recently edited to most recently edited.
+
+5. Sorting duplicate-name contacts
+
+    1. Prerequisites: Add two contacts named John Tan with different phone numbers.
+
+    2. Test case: `sort name asc`<br>
+       Expected: John Tan appears before John Tan_2.
+
+    3. Test case: `sort name desc`<br>
+       Expected: The duplicate-name contacts remain in deterministic index order, with John Tan appearing before John Tan_2.
+
+6. Sorting while a filter is active
+
+    1. Prerequisites: Add several contacts with different names.
+
+    2. Test case: Run `find John`, followed by `sort name desc`.<br>
+       Expected: Only matching contacts are displayed, in descending alphabetical order.
+
+    3. Test case: Run `list`.<br>
+       Expected: All contacts are displayed using the saved sort order.
+
+7. Interaction with recently viewed contacts
+
+    1. Prerequisites: View several contacts using the `show` command.
+
+    2. Test case: Run `sort name desc`, followed by `recent`.<br>
+       Expected: Contacts are displayed in recently viewed order, newest first.
+
+    3. Test case: Run `list`.<br>
+       Expected: All contacts are displayed using the previously selected name-descending sort order.
+
+8. Invalid sorting commands
+
+    1. Test cases: `sort`, `sort invalid asc`, `sort name invalid`, and `sort name asc extra`.<br>
+       Expected: Each command displays an appropriate error message without changing the current sort order.
+
+### Deleting a person
+
+1. Deleting a person while all persons are being shown
+
+    1. Prerequisites: List all persons using the `list` command, with multiple persons in the list.
+
+    1. Test case: `delete John Tan`<br>
+       Expected: The unsuffixed John Tan contact is deleted. The status message shows the deleted contact's details.
+
+    1. Test case: `delete John Tan_2`<br>
+       Expected: The contact displayed as John Tan_2 is deleted, while the unsuffixed John Tan remains.
+
+    1. Test case: `delete Jane Lim`<br>
+       Expected: No person is deleted. The status message shows error details.
+
+    1. Other incorrect delete commands to try: `delete`, `delete John Tan_`, `delete John Tan_0`<br>
+       Expected: Similar to previous.
+
+2. Deleting a person while a different search result is displayed
+
+    1. Prerequisites: Add contacts named John Tan and Jane Lim.
+
+    1. Test case: Run `find Jane`, followed by `delete John Tan`.<br>
+       Expected: John Tan is deleted even though the displayed list only contains Jane Lim.
+
+### Clearing all entries
+
+1. Cancelling clear
+    1. Test case: `clear`, then type `no`<br>
+       Expected: Clear operation cancelled; contacts remain.
+
+1. Confirming clear
+    1. Test case: `clear`, then type `yes`<br>
+       Expected: Address book cleared; all contacts removed.
 
 ### Showing a contact's details
 
@@ -769,135 +936,6 @@ Use a disposable data folder. Add two contacts named John Tan with different pho
 1. Exit normally and relaunch in the same folder. Run `favourites`; the selection should survive.
 1. Delete the favourite, add another contact with the same name, and run `favourites`. The replacement must not inherit the selection.
 1. Mark a contact; run `clear`, then `no`. Its selection should remain. Repeat `clear`, then `yes`: contacts and selections should both be empty after restart.
-
-### Editing a person
-
-Use a disposable data folder and add two contacts named John Tan with different phone numbers.
-
-1. Editing a contact's basic details
-
-   1. Test case: `edit John Tan /phone 91234567`<br>
-   Expected: The phone number of the unsuffixed John Tan is updated, while John Tan_2 remains unchanged.
-
-2. Editing a duplicate-name contact
-
-   1. Test case: `edit John Tan_2 /phone 98765432`<br>
-   Expected: Only the second John Tan is updated.
-
-3. Clearing an optional field
-
-   1. Test case: `edit John Tan /major [blank]`<br>
-   Expected: The contact's major is cleared, while other fields remain unchanged.
-
-4. Editing a contact while another contact is displayed
-
-   1. Test case: Run `find Jane`, followed by `edit John Tan /phone 91234567`.<br>
-   Expected: John Tan is updated even though the displayed list only contains Jane Lim.
-
-5. Editing a nonexistent contact
-
-   1. Test case: `edit Nonexistent Person /phone 91234567`<br>
-   Expected: No contact is modified. The result area displays an error message.
-
-### Deleting a person
-
-1. Deleting a person while all persons are being shown
-
-   1. Prerequisites: List all persons using the `list` command, with multiple persons in the list.
-
-   1. Test case: `delete John Tan`<br>
-      Expected: The unsuffixed John Tan contact is deleted. The status message shows the deleted contact's details.
-
-   1. Test case: `delete John Tan_2`<br>
-      Expected: The contact displayed as John Tan_2 is deleted, while the unsuffixed John Tan remains.
-
-   1. Test case: `delete Jane Lim`<br>
-      Expected: No person is deleted. The status message shows error details.
-
-   1. Other incorrect delete commands to try: `delete`, `delete John Tan_`, `delete John Tan_0`<br>
-      Expected: Similar to previous.
-
-2. Deleting a person while a different search result is displayed
-   
-   1. Prerequisites: Add contacts named John Tan and Jane Lim.
-     
-   1. Test case: Run `find Jane`, followed by `delete John Tan`.<br>
-      Expected: John Tan is deleted even though the displayed list only contains Jane Lim.
-
-### Sorting
-
-Use a disposable data folder. Add several contacts with different names and phone numbers, including two contacts named John Tan with different phone numbers.
-
-1. Sorting by name
-
-   1. Test case: `sort name asc`<br>
-   Expected: Contacts are displayed in ascending alphabetical order of their names.
-
-   2. Test case: `sort name desc`<br>
-   Expected: Contacts are displayed in descending alphabetical order of their names.
-
-2. Sorting by phone number
-
-   1. Test case: `sort phone asc`<br>
-   Expected: Contacts are displayed in ascending order of their phone numbers.
-
-   2. Test case: `sort phone desc`<br>
-   Expected: Contacts are displayed in descending order of their phone numbers.
-
-3. Sorting by creation time
-
-   1. Prerequisites: Add three contacts, one after another, with a short delay between additions.
-
-   2. Test case: `sort add asc`<br>
-   Expected: Contacts are displayed from most recently created to oldest.
-
-   3. Test case: `sort add desc`<br>
-   Expected: Contacts are displayed from oldest to most recently created.
-
-4. Sorting by last-edited time
-
-   1. Prerequisites: Add three contacts, then edit them one after another, with a short delay between edits.
-
-   2. Test case: `sort edit asc`<br>
-   Expected: Contacts are displayed from most recently edited to least recently edited.
-
-   3. Test case: `sort edit desc`<br>
-   Expected: Contacts are displayed from least recently edited to most recently edited.
-
-5. Sorting duplicate-name contacts
-
-   1. Prerequisites: Add two contacts named John Tan with different phone numbers.
-
-   2. Test case: `sort name asc`<br>
-   Expected: John Tan appears before John Tan_2.
-
-   3. Test case: `sort name desc`<br>
-   Expected: The duplicate-name contacts remain in deterministic index order, with John Tan appearing before John Tan_2.
-
-6. Sorting while a filter is active
-
-   1. Prerequisites: Add several contacts with different names.
-
-   2. Test case: Run `find John`, followed by `sort name desc`.<br>
-   Expected: Only matching contacts are displayed, in descending alphabetical order.
-
-   3. Test case: Run `list`.<br>
-   Expected: All contacts are displayed using the saved sort order.
-
-7. Interaction with recently viewed contacts
-
-   1. Prerequisites: View several contacts using the `show` command.
-
-   2. Test case: Run `sort name desc`, followed by `recent`.<br>
-   Expected: Contacts are displayed in recently viewed order, newest first.
-
-   3. Test case: Run `list`.<br>
-   Expected: All contacts are displayed using the previously selected name-descending sort order.
-
-8. Invalid sorting commands
-
-   1. Test cases: `sort`, `sort invalid asc`, `sort name invalid`, and `sort name asc extra`.<br>
-   Expected: Each command displays an appropriate error message without changing the current sort order.
 
 ### Contact photos
 
@@ -980,5 +1018,3 @@ Use a disposable data folder. Prepare image files in PNG, JPG, JPEG, and GIF for
    1. Prerequisites: Add two contacts named `John Tan`, close the application, then relaunch it.
 
    1. Expected: Both contacts remain available with the same display identifiers. `data/campuscontacts.json` stores them inside `personsByName` under `John Tan`.
-
-1. _{ more test cases … }_

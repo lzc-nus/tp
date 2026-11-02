@@ -39,8 +39,8 @@ public class ShowCommand extends Command {
     @Override
     public CommandResult execute(Model model) throws CommandException {
         requireNonNull(model);
-        List<Person> lastShownList = model.getFilteredPersonList();
-        Person personToShow = lastShownList.stream()
+        List<Person> allPersons = model.getAddressBook().getPersonList();
+        Person personToShow = allPersons.stream()
                 .filter(person -> person.getName().fullName.equals(targetName))
                 .filter(person -> targetIndex.equals(person.getPersonIndex()))
                 .findFirst()
