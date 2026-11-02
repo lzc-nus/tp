@@ -18,6 +18,7 @@
 * `lzc-nus` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 * `enzo-myx` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 * `scoot1234` used OpenAI Codex for design, implementation, testing, and documentation assistance.
+* `Ciltan` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 
 --------------------------------------------------------------------------------------------------------------------
 
