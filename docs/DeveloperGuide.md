@@ -814,17 +814,7 @@ testers are expected to do more *exploratory* testing.
     3. Test case: `sort edit desc`<br>
        Expected: Contacts are displayed from least recently edited to most recently edited.
 
-5. Sorting duplicate-name contacts
-
-    1. Prerequisites: Add two contacts named John Tan with different phone numbers.
-
-    2. Test case: `sort name asc`<br>
-       Expected: John Tan appears before John Tan_2.
-
-    3. Test case: `sort name desc`<br>
-       Expected: The duplicate-name contacts remain in deterministic index order, with John Tan appearing before John Tan_2.
-
-6. Sorting while a filter is active
+5. Sorting while a filter is active
 
     1. Prerequisites: Add several contacts with different names.
 
@@ -834,7 +824,7 @@ testers are expected to do more *exploratory* testing.
     3. Test case: Run `list`.<br>
        Expected: All contacts are displayed using the saved sort order.
 
-7. Interaction with recently viewed contacts
+6. Interaction with recently viewed contacts
 
     1. Prerequisites: View several contacts using the `show` command.
 
@@ -844,7 +834,7 @@ testers are expected to do more *exploratory* testing.
     3. Test case: Run `list`.<br>
        Expected: All contacts are displayed using the previously selected name-descending sort order.
 
-8. Invalid sorting commands
+7. Invalid sorting commands
 
     1. Test cases: `sort`, `sort invalid asc`, `sort name invalid`, and `sort name asc extra`.<br>
        Expected: Each command displays an appropriate error message without changing the current sort order.
