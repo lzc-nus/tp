@@ -36,7 +36,7 @@ You can reach us at the email `seer[at]comp.nus.edu.sg`
 
 <img src="images/enzo-myx.png" width="200px">
 
-[[homepage](https://www.linkedin.com/in/yuxuan-meng-a284813b9/)] [[github](http://github.com/Enzo-MYX)] [portfolio (non-existent atm)]
+[[homepage](https://www.linkedin.com/in/yuxuan-meng-a284813b9/)] [[github](http://github.com/Enzo-MYX)] [[portfolio](team/enzo-myx.md)]
 
 - Role: Developer
 - Responsibilities: Coding (duh.)
