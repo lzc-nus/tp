@@ -17,6 +17,7 @@
 * Libraries used: [JavaFX](https://openjfx.io/), [Jackson](https://github.com/FasterXML/jackson), and [JUnit 5](https://junit.org/junit5/).
 * `lzc-nus` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 * `enzo-myx` used OpenAI Codex for design, implementation, testing, and documentation assistance.
+* `scoot1234` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 
 --------------------------------------------------------------------------------------------------------------------
 
