@@ -18,6 +18,7 @@
 * `lzc-nus` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 * `enzo-myx` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 * `scoot1234` used OpenAI Codex for design, implementation, testing, and documentation assistance.
+* `Ciltan` used OpenAI Codex for design, implementation, testing, and documentation assistance.
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -537,15 +538,15 @@ Use case ends.
 **Extensions**
 
 * 1a. The provided name does not match any existing contact.
-  
+
   * 1a1. System displays an error message.
-    
+
     Use case ends.
-    
+
 * 2a. One or more supplied fields are invalid.
-  
+
   * 2a1. System displays an error message and does not apply the invalid changes.
-    
+
     Use case ends.
 
 **Use case: Add favourite contacts**
@@ -562,15 +563,15 @@ Use case ends.
 **Extensions**
 
 * 1a. The contact is already a favourite.
-  
+
   * 1a1. System informs the user that the contact is already a favourite.
-    
+
     Use case ends.
-    
+
 * 1b. The contact does not exist.
-  
+
   * 1b1. System displays an error message.
-    
+
     Use case ends.
 
 **Use case: Remove favourite contacts**
@@ -585,15 +586,15 @@ Use case ends.
 **Extensions**
 
 * 1a. The contact is already not a favourite.
-  
+
   * 1a1. System informs the user that the contact is already not a favourite.
-    
+
     Use case ends.
-  
+
 * 1b. The contact does not exist.
-  
+
   * 1b1. System displays an error message.
-    
+
     Use case ends.
 
 **Use case: Sort contacts**
@@ -608,9 +609,9 @@ Use case ends.
 **Extensions**
 
 * 1a. The user supplies an unsupported sorting attribute or direction.
-  
+
   * 1a1. System displays an error message without changing the current sort order.
-    
+
     Use case ends.
 
 **Use case: Delete a contact**
@@ -705,10 +706,10 @@ testers are expected to do more *exploratory* testing.
 1. Closing CampusContacts and subsequent launches
 
    1. Close the window.
-      
+
    1. Double-click the JAR file in the same folder.<br>
       Expected: The GUI opens with all previous contacts saved automatically.
-   
+
 1. Saving window preferences
 
    1. Resize the window to an optimal size. Move the window to a different location. Close the window.
