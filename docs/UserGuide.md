@@ -219,7 +219,8 @@ Running `recent`, `list` or `sort` does not count as a visit.
 `recent` replaces the current filter and temporarily uses history order rather than your selected sort.
 Reopening a contact while viewing `recent` immediately moves it to the front. `list` returns to all contacts
 in your saved sort order; adding a contact also returns to all contacts. `sort FIELD [asc|desc]` sorts the
-currently displayed matches as usual; run `recent` again to restore latest-first order.
+recent contacts by the selected field. Later profile views and renames still update the recent list while
+preserving that sort order; run `recent` again to restore latest-first order.
 
 History is saved automatically with your contacts. After a restart, run `recent` to see it again.
 Deleting a contact removes it from history. A new contact using the same name and suffix starts without

@@ -129,6 +129,91 @@ class RecentWorkflowTest {
     }
 
     @Test
+    void execute_renameInSortedRecent_keepsNewSuffixVisibleAndPersistsHistory() throws Exception {
+        JsonAddressBookStorage storage = new JsonAddressBookStorage(tempDir.resolve("sorted-rename.json"));
+        Logic logic = newLogic(model, storage);
+        addJohns(logic);
+        logic.execute("add Jane Tan /role student /email jane@u.nus.edu /phone 90000003 /location COM3");
+        logic.execute("show John Tan");
+        logic.execute("show John Tan_2");
+        logic.execute("recent");
+        logic.execute("sort name desc");
+
+        logic.execute("edit John Tan_2 /name Jane Tan");
+
+        assertEquals(List.of("John Tan", "Jane Tan_2"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+        assertEquals(List.of("Jane Tan_2", "John Tan"), storage.readAddressBook().orElseThrow().getRecentContacts());
+    }
+
+    @Test
+    void execute_sortedRecentVisitsAndPhoneEdit_keepSelectedSort() throws Exception {
+        Logic logic = newLogic(model, new JsonAddressBookStorage(tempDir.resolve("sorted-visits.json")));
+        addJohns(logic);
+        logic.execute("show John Tan");
+        logic.execute("recent");
+        logic.execute("sort phone desc");
+
+        logic.execute("show John Tan_2");
+        assertEquals(List.of("John Tan_2", "John Tan"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+        logic.execute("show John Tan");
+        assertEquals(List.of("John Tan_2", "John Tan"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+
+        logic.execute("edit John Tan /phone 90000009");
+        assertEquals(List.of("John Tan", "John Tan_2"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+        logic.execute("delete John Tan");
+        logic.execute("show John Tan_2");
+        assertEquals(List.of("John Tan_2"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+    }
+
+    @Test
+    void execute_recentAfterSorting_restoresVisitOrderAndListUsesSavedSort() throws Exception {
+        Logic logic = newLogic(model, new JsonAddressBookStorage(tempDir.resolve("sorted-order.json")));
+        addJohns(logic);
+        logic.execute("show John Tan");
+        logic.execute("show John Tan_2");
+        logic.execute("recent");
+        logic.execute("sort name");
+        assertEquals(List.of("John Tan", "John Tan_2"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+
+        logic.execute("recent");
+        assertEquals(List.of("John Tan_2", "John Tan"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+        logic.execute("list");
+        assertEquals(List.of("John Tan", "John Tan_2"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+    }
+
+    @Test
+    void execute_showSaveFailureInSortedRecent_restoresMembershipAndKeepsSort() throws Exception {
+        Logic setupLogic = newLogic(model, new JsonAddressBookStorage(tempDir.resolve("sorted-save.json")));
+        addJohns(setupLogic);
+        setupLogic.execute("add Jane Tan /role student /email jane@u.nus.edu /phone 90000003 /location COM3");
+        setupLogic.execute("show John Tan");
+        setupLogic.execute("show John Tan_2");
+        setupLogic.execute("recent");
+        setupLogic.execute("sort name");
+        JsonAddressBookStorage failingStorage = new JsonAddressBookStorage(tempDir.resolve("failed-sort.json")) {
+            @Override
+            public void saveAddressBook(ReadOnlyAddressBook addressBook) throws IOException {
+                throw new IOException("disk unavailable");
+            }
+        };
+
+        CommandResult result = newLogic(model, failingStorage).execute("show Jane Tan");
+
+        assertTrue(result.getFeedbackToUser().contains(LogicManager.MESSAGE_SAVE_RETRY_WARNING));
+        assertEquals(List.of("John Tan_2", "John Tan"), model.getAddressBook().getRecentContacts());
+        assertEquals(List.of("John Tan", "John Tan_2"), model.getFilteredPersonList().stream()
+                .map(Person::getDisplayName).toList());
+    }
+
+    @Test
     void execute_saveFailure_keepsCommandChangeAndReportsRetryWarning() throws Exception {
         Logic setupLogic = newLogic(model, new JsonAddressBookStorage(tempDir.resolve("contacts.json")));
         addJohns(setupLogic);
