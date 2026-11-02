@@ -28,6 +28,7 @@ public class ModelManager implements Model {
     private final FilteredList<Person> filteredPersons;
     private final SortedList<Person> sortedPersons;
     private boolean isRecentView;
+    private boolean isRecentOrder;
     private boolean isFavouritesView;
 
     /**
@@ -73,7 +74,7 @@ public class ModelManager implements Model {
     public void setAddressBook(ReadOnlyAddressBook addressBook) {
         this.addressBook.resetData(addressBook);
         if (isRecentView) {
-            showRecentPersons();
+            refreshRecentPersons();
         } else if (isFavouritesView) {
             showFavouritePersons();
         }
@@ -108,7 +109,7 @@ public class ModelManager implements Model {
 
         Person replacement = addressBook.setPerson(target, editedPerson);
         if (isRecentView) {
-            showRecentPersons();
+            refreshRecentPersons();
         } else if (isFavouritesView) {
             showFavouritePersons();
         }
@@ -130,6 +131,7 @@ public class ModelManager implements Model {
     public void updateFilteredPersonList(Predicate<Person> predicate) {
         requireNonNull(predicate);
         isRecentView = false;
+        isRecentOrder = false;
         isFavouritesView = false;
         filteredPersons.setPredicate(predicate);
         applySortPreference();
@@ -139,7 +141,7 @@ public class ModelManager implements Model {
     public void recordPersonViewed(Person person) {
         addressBook.recordPersonViewed(person);
         if (isRecentView) {
-            showRecentPersons();
+            refreshRecentPersons();
         }
     }
 
@@ -147,17 +149,27 @@ public class ModelManager implements Model {
     public void restoreRecentContacts(List<String> identifiers) {
         addressBook.setRecentContacts(identifiers);
         if (isRecentView) {
-            showRecentPersons();
+            refreshRecentPersons();
         }
     }
 
     @Override
     public void showRecentPersons() {
-        List<String> recent = addressBook.getRecentContacts();
-        updateFilteredPersonList(person -> recent.contains(person.getDisplayName()));
-        // History is newest-first, so a lower position means a more recently viewed contact.
-        sortedPersons.setComparator(Comparator.comparingInt(person -> recent.indexOf(person.getDisplayName())));
         isRecentView = true;
+        isRecentOrder = true;
+        isFavouritesView = false;
+        refreshRecentPersons();
+    }
+
+    private void refreshRecentPersons() {
+        List<String> recent = addressBook.getRecentContacts();
+        filteredPersons.setPredicate(person -> recent.contains(person.getDisplayName()));
+        if (isRecentOrder) {
+            // History is newest-first, so a lower position means a more recently viewed contact.
+            sortedPersons.setComparator(Comparator.comparingInt(person -> recent.indexOf(person.getDisplayName())));
+        } else {
+            applySortPreference();
+        }
     }
 
     @Override
@@ -179,7 +191,7 @@ public class ModelManager implements Model {
         requireNonNull(field);
         userPrefs.setSortField(field);
         userPrefs.setSortDescending(descending);
-        isRecentView = false;
+        isRecentOrder = false;
         applySortPreference();
     }
 
