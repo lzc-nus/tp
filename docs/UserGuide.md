@@ -182,23 +182,24 @@ Format: `edit NAME[_NUMBER] [/name NAME] [/phone PHONE] [/email EMAIL] [/locatio
 - When editing tags, all of the person's existing tags are removed; adding tags is not cumulative.
 - To remove all of a person's tags, enter `t/` without a tag after it.
 - Use `/photo FILE_PATH` to add or replace a contact photo. Use `/photo [blank]` to remove it.
+- You cannot assign professor fields (`/faculty`, `/department`, `/hours`) to a student, nor student fields (`/major`, `/year`) to a professor.
 - Renaming a contact assigns the smallest available suffix for the new name. If that name already exists, the contact is added under the next available suffix. If the new name is the same as the old one, the contact keeps its current suffix.
 
 Examples:
 * `edit John Doe /phone 91234567 /email johndoe@example.com` Edits the phone number and email address of John Doe.
 * `edit Alice /name Betsy Crower t/` Edits Alice's name to be `Betsy Crower` and clears all existing tags.
 * `edit John Doe /location UTown Residence` Edits the location of John Doe.
-* `edit John Doe_2 /name John Doe` reuses John Doe without suffix, if it is available.
 
 ### Showing a contact's details: `show`
 
-Opens a popup containing a contact's display name, contact ID, phone number, email, location, tags, and photo when one was added.
+Opens a popup containing a contact's display name, contact ID, role, phone number, email, location, role-specific details, tags, added/edited timestamps, and photo when one was added.
 
 Format: `show NAME[_NUMBER]`
 
 - Use the contact's displayed name.
 - The optional `_NUMBER` identifies a particular contact when several contacts have the same name.
 - If the suffix is omitted, CampusContacts selects the unsuffixed contact.
+- Showing works across the whole address book, even if the contact is hidden by the current filter.
 
 Examples:
 
@@ -219,8 +220,6 @@ Running `recent`, `list` or `sort` does not count as a visit.
 Reopening a contact while viewing `recent` immediately moves it to the front. `list` returns to all contacts
 in your saved sort order; adding a contact also returns to all contacts. `sort FIELD [asc|desc]` sorts the
 currently displayed matches as usual; run `recent` again to restore latest-first order.
-As with the existing `show` command, only contacts in the currently displayed list can be opened:
-run `list` first if the contact you want is hidden.
 
 History is saved automatically with your contacts. After a restart, run `recent` to see it again.
 Deleting a contact removes it from history. A new contact using the same name and suffix starts without

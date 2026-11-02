@@ -152,9 +152,9 @@ public class ContactDetailsWindow extends UiPart<Stage> {
         hide();
     }
 
-    /** Closes the window when the user presses X. */
+    /** Closes the window when the user presses X or Esc. */
     private void handleKeyPressed(KeyEvent event) {
-        if (event.getCode() == KeyCode.X) {
+        if (event.getCode() == KeyCode.X || event.getCode() == KeyCode.ESCAPE) {
             handleClose();
             event.consume();
         }
